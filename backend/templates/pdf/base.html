@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @page { size: A4; margin: 2cm; }
+    body { font-family: Helvetica, Arial, sans-serif; color: #1f2937; font-size: 11px; }
+    .header { border-bottom: 3px solid #00008f; padding-bottom: 10px; margin-bottom: 20px; }
+    .brand { color: #00008f; font-size: 22px; font-weight: bold; }
+    .doc-title { font-size: 16px; font-weight: bold; margin-top: 4px; }
+    .ref { color: #6b7280; font-size: 10px; }
+    h2 { color: #00008f; font-size: 13px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-top: 18px; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 4px 6px; vertical-align: top; }
+    td.label { color: #6b7280; width: 40%; }
+    .footer { margin-top: 30px; font-size: 9px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">AXA</div>
+    <div class="doc-title">{% block doc_title %}{% endblock %}</div>
+    <div class="ref">Référence : {{ demande.reference }} — généré le {% now "d/m/Y H:i" %}</div>
+  </div>
+  {% block content %}{% endblock %}
+  <div class="footer">
+    Document généré automatiquement par la plateforme Attestations de Chantier — AXA. Usage interne.
+  </div>
+</body>
+</html>

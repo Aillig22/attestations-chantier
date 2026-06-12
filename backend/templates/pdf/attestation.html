@@ -1,0 +1,10 @@
+{% extends "pdf/base.html" %}
+{% block doc_title %}Attestation de Chantier{% if attestation.type == "DEFINITIVE" %} (définitive){% else %} (projet){% endif %}{% endblock %}
+{% block content %}
+  <div class="attestation-body">
+    {{ attestation.contenu|safe }}
+  </div>
+  {% if attestation.validee %}
+    <p style="margin-top:40px;color:#16a34a;font-weight:bold;">✔ Attestation validée</p>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,132 @@
+@import 'tailwindcss';
+
+/* ----------------------------------------------------------------------- */
+/* Design tokens AXA — définis une seule fois, consommés via les utilitaires */
+/* Tailwind (bg-primary, text-axa-blue...) et les classes composant ci-dessous */
+/* ----------------------------------------------------------------------- */
+@theme {
+  --color-axa-blue: #00008f;
+  --color-axa-blue-dark: #00006b;
+  --color-axa-red: #ff1721;
+  --color-primary: #00008f;
+  --color-primary-foreground: #ffffff;
+  --color-background: #f7f7f9;
+  --color-surface: #ffffff;
+  --color-border: #e5e7eb;
+  --color-muted: #6b7280;
+  --color-foreground: #1f2937;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+
+  --radius-axa: 0.75rem;
+  --font-sans: 'Source Sans 3', 'Inter', system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  h1 {
+    @apply text-2xl font-bold text-foreground;
+  }
+  h2 {
+    @apply text-lg font-semibold text-foreground;
+  }
+  a {
+    @apply text-axa-blue hover:underline;
+  }
+}
+
+/* ----------------------------------------------------------------------- */
+/* Briques composables déclarées en @utility : seules les utilities peuvent */
+/* être réutilisées via @apply dans d'autres classes (contrainte Tailwind v4).*/
+/* ----------------------------------------------------------------------- */
+@utility card-axa {
+  @apply bg-surface border border-border rounded-[var(--radius-axa)] shadow-sm;
+}
+@utility card-pad {
+  @apply p-6;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm
+         font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+         focus:outline-none focus:ring-2 focus:ring-axa-blue/40 cursor-pointer;
+}
+@utility badge {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
+
+/* ----------------------------------------------------------------------- */
+/* Classes composant : variantes factorisées au-dessus des briques ci-dessus */
+/* pour éviter de répéter les chaînes d'utilitaires dans le JSX.            */
+/* ----------------------------------------------------------------------- */
+@layer components {
+  .section-title {
+    @apply text-axa-blue font-semibold text-sm uppercase tracking-wide mb-3;
+  }
+
+  /* Boutons */
+  .btn-primary {
+    @apply btn bg-axa-blue text-white hover:bg-axa-blue-dark;
+  }
+  .btn-danger {
+    @apply btn bg-axa-red text-white hover:brightness-90;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-foreground hover:bg-background border border-border;
+  }
+  .btn-success {
+    @apply btn bg-success text-white hover:brightness-95;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  /* Formulaires */
+  .form-row {
+    @apply flex flex-col gap-1.5 mb-4;
+  }
+  .label-axa {
+    @apply text-sm font-medium text-foreground;
+  }
+  .input-axa {
+    @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm
+           focus:outline-none focus:ring-2 focus:ring-axa-blue/40 focus:border-axa-blue;
+  }
+  .help-text {
+    @apply text-xs text-muted;
+  }
+  .error-text {
+    @apply text-xs text-danger;
+  }
+
+  /* Pastilles de risque */
+  .pill-risk-faible {
+    @apply badge bg-green-100 text-green-800;
+  }
+  .pill-risk-moyen {
+    @apply badge bg-amber-100 text-amber-800;
+  }
+  .pill-risk-eleve {
+    @apply badge bg-red-100 text-red-800;
+  }
+
+  /* Mise en page */
+  .page {
+    @apply mx-auto w-full max-w-6xl px-4 py-6;
+  }
+  .stat-card {
+    @apply card-axa card-pad flex flex-col gap-1;
+  }
+
+  /* Contenu riche (éditeur / attestation) */
+  .prose-axa {
+    @apply text-sm leading-relaxed;
+  }
+  .prose-axa h1 { @apply text-xl font-bold mb-2; }
+  .prose-axa h2 { @apply text-lg font-semibold mb-2; }
+  .prose-axa p { @apply mb-2; }
+  .prose-axa ul { @apply list-disc pl-5 mb-2; }
+  .prose-axa strong { @apply font-semibold; }
+}
