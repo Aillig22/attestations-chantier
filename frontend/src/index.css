@@ -26,6 +26,18 @@
 
   --radius-axa: 0.5rem;              /* 8px (radius Apollo, conteneurs) */
   --font-sans: 'Source Sans 3', 'Source Sans Pro', Arial, sans-serif;
+
+  /* Data palette AXA — couleurs data-viz / chips uniquement (jamais en fond de page).
+     Texte accessible : bleu AXA sur les clairs, blanc sur Cherry/Teal/Grape. */
+  --color-data-cotton: #ffb4ce;
+  --color-data-coral: #ff9c62;
+  --color-data-sunshine: #fff06c;
+  --color-data-leaf: #58c645;
+  --color-data-mint: #81eebb;
+  --color-data-sky: #74bde8;
+  --color-data-cherry: #a30245;
+  --color-data-teal: #0f717f;
+  --color-data-grape: #614fe8;
 }
 
 @layer base {
@@ -117,15 +129,15 @@
     @apply text-xs text-danger;
   }
 
-  /* Pastilles de risque */
+  /* Pastilles de risque — Data palette AXA en teintes douces. */
   .pill-risk-faible {
-    @apply badge bg-green-100 text-green-800;
+    @apply badge bg-data-mint/30 text-[#0e6b49];
   }
   .pill-risk-moyen {
-    @apply badge bg-amber-100 text-amber-800;
+    @apply badge bg-data-coral/25 text-[#9a4715];
   }
   .pill-risk-eleve {
-    @apply badge bg-red-100 text-red-800;
+    @apply badge bg-data-cherry/10 text-data-cherry;
   }
 
   /* Mise en page */

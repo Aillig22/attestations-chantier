@@ -6,10 +6,11 @@ export const STATUT_LABELS: Record<Statut, string> = {
   TRAITE: 'Traité',
 }
 
+/* Chips statut — Data palette AXA en teintes douces (fond pâle + texte foncé). */
 export const STATUT_BADGE: Record<Statut, string> = {
-  BROUILLON: 'bg-gray-100 text-gray-700',
-  EN_COURS: 'bg-blue-100 text-blue-800',
-  TRAITE: 'bg-green-100 text-green-800',
+  BROUILLON: 'bg-gray-100 text-gray-600',
+  EN_COURS: 'bg-data-sunshine/30 text-axa-blue',
+  TRAITE: 'bg-data-sky/25 text-axa-blue',
 }
 
 export const DECISION_LABELS: Record<'ACCEPTEE' | 'REFUSEE', string> = {
@@ -17,9 +18,10 @@ export const DECISION_LABELS: Record<'ACCEPTEE' | 'REFUSEE', string> = {
   REFUSEE: 'Refusée',
 }
 
+/* Chips décision — Leaf doux pour Acceptée, Cherry doux pour Refusée. */
 export const DECISION_BADGE: Record<'ACCEPTEE' | 'REFUSEE', string> = {
-  ACCEPTEE: 'bg-green-100 text-green-800',
-  REFUSEE: 'bg-red-100 text-red-800',
+  ACCEPTEE: 'bg-data-leaf/20 text-[#2f6b22]',
+  REFUSEE: 'bg-data-cherry/10 text-data-cherry',
 }
 
 export function decisionLabel(d: Decision) {
