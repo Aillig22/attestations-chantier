@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth'
 import { useToast } from '@/components/Toast'
 import { apiError } from '@/lib/api'
 import { DecisionBadge, StatutBadge } from '@/components/Badges'
+import { FilterSelect } from '@/components/FilterSelect'
 import { formatDate } from '@/lib/utils'
 
 export function DemandesListPage() {
@@ -47,28 +48,40 @@ export function DemandesListPage() {
         )}
       </div>
 
-      <div className="card-axa mb-4 flex flex-wrap gap-4 p-4">
-        <div className="form-row mb-0">
-          <label className="label-axa">Statut</label>
-          <select className="input-axa" value={statut} onChange={(e) => setStatut(e.target.value)}>
-            <option value="">Tous</option>
-            <option value="BROUILLON">Brouillon</option>
-            <option value="EN_COURS">En cours</option>
-            <option value="TRAITE">Traité</option>
-          </select>
-        </div>
-        <div className="form-row mb-0">
-          <label className="label-axa">Décision</label>
-          <select
-            className="input-axa"
-            value={decision}
-            onChange={(e) => setDecision(e.target.value)}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted">
+          Filtrer
+        </span>
+        <FilterSelect
+          value={statut}
+          onChange={setStatut}
+          options={[
+            { value: '', label: 'Tous les statuts' },
+            { value: 'BROUILLON', label: 'Brouillon' },
+            { value: 'EN_COURS', label: 'En cours' },
+            { value: 'TRAITE', label: 'Traité' },
+          ]}
+        />
+        <FilterSelect
+          value={decision}
+          onChange={setDecision}
+          options={[
+            { value: '', label: 'Toutes les décisions' },
+            { value: 'ACCEPTEE', label: 'Acceptée' },
+            { value: 'REFUSEE', label: 'Refusée' },
+          ]}
+        />
+        {(statut || decision) && (
+          <button
+            onClick={() => {
+              setStatut('')
+              setDecision('')
+            }}
+            className="text-xs font-semibold text-axa-blue hover:underline"
           >
-            <option value="">Toutes</option>
-            <option value="ACCEPTEE">Acceptée</option>
-            <option value="REFUSEE">Refusée</option>
-          </select>
-        </div>
+            Réinitialiser
+          </button>
+        )}
       </div>
 
       <div className="card-axa overflow-hidden">

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Bell, FileText, LayoutDashboard, LogOut } from 'lucide-react'
+import logoAxa from '@/assets/logo-axa.svg'
 import { useAuth } from '@/lib/auth'
 import { useNotifications } from '@/lib/queries'
 import { cn } from '@/lib/utils'
@@ -12,8 +13,10 @@ function NavItem({ to, icon, label, badge }: { to: string; icon: ReactNode; labe
       end
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-          isActive ? 'bg-axa-blue text-white' : 'text-foreground hover:bg-background',
+          'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all',
+          isActive
+            ? 'bg-axa-blue text-white shadow-sm shadow-axa-blue/30'
+            : 'text-foreground hover:bg-axa-blue-light',
         )
       }
     >
@@ -32,17 +35,16 @@ export function Layout() {
   const unread = notifications?.filter((n) => !n.lue).length ?? 0
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-surface p-4 md:flex">
-        <div className="mb-6 flex items-center gap-2 px-2">
-          <span className="text-2xl font-bold text-axa-blue">AXA</span>
-          <span className="text-xs text-muted leading-tight">
-            Attestations
-            <br />
-            de chantier
-          </span>
+    <div className="flex min-h-screen bg-background p-0 md:p-3">
+      <aside className="hidden w-64 shrink-0 flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm md:flex">
+        <div className="mb-7 flex items-center gap-3 px-1">
+          <img src={logoAxa} alt="AXA" className="h-11 w-11 shrink-0 rounded-lg" />
+          <div className="leading-tight">
+            <span className="block text-xl font-bold uppercase text-axa-blue">Attestations</span>
+            <span className="block text-[13px] font-semibold uppercase text-muted">de chantier</span>
+          </div>
         </div>
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-col gap-1.5">
           <NavItem to="/" icon={<LayoutDashboard size={18} />} label="Demandes" />
           <NavItem
             to="/notifications"
@@ -52,24 +54,29 @@ export function Layout() {
           />
           <NavItem to="/reporting" icon={<FileText size={18} />} label="Reporting" />
         </nav>
-        <div className="mt-auto border-t border-border pt-4">
-          <div className="mb-2 px-2">
-            <p className="text-sm font-medium">{user?.nom_complet || user?.username}</p>
-            <p className="text-xs text-muted">
-              {user?.role === 'SIEGE' ? 'Siège' : 'Distributeur'}
-            </p>
+        <div className="mt-auto">
+          <div className="mb-3 flex items-center gap-3 rounded-xl bg-background p-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-axa-blue text-xs font-bold text-white">
+              {(user?.nom_complet || user?.username || '?').slice(0, 2).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{user?.nom_complet || user?.username}</p>
+              <p className="text-xs text-muted">
+                {user?.role === 'SIEGE' ? 'Siège' : 'Distributeur'}
+              </p>
+            </div>
           </div>
-          <button onClick={logout} className="btn-ghost btn-sm w-full">
+          <button onClick={logout} className="btn-ghost-danger btn-sm w-full">
             <LogOut size={14} /> Déconnexion
           </button>
         </div>
       </aside>
 
-      <div className="flex-1 bg-background">
-        <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:hidden">
-          <span className="text-xl font-bold text-axa-blue">AXA</span>
-          <button onClick={logout} className="btn-ghost btn-sm">
-            <LogOut size={14} />
+      <div className="flex-1 md:pl-3">
+        <header className="mb-3 flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3 shadow-sm md:hidden">
+          <img src={logoAxa} alt="AXA" className="h-9 w-9 rounded-md" />
+          <button onClick={logout} className="btn-ghost-danger btn-sm">
+            <LogOut size={14} /> Déconnexion
           </button>
         </header>
         <main>

@@ -9,22 +9,22 @@
 /* tokens Canopée sont indiqués en commentaire.                              */
 /* ----------------------------------------------------------------------- */
 @theme {
-  --color-axa-blue: #00008f;        /* axablue80 (brand-primary) */
-  --color-axa-blue-dark: #00005c;   /* axablue100 (hover/inset border) */
-  --color-axa-blue-light: #e6e6ff;  /* axablue40 (fonds discrets) */
-  --color-axa-red: #c6102e;         /* red30 */
+  --color-axa-blue: #00008f;        /* blue-1000 (brand primary) */
+  --color-axa-blue-dark: #000070;   /* blue-1200 (hover) */
+  --color-axa-blue-light: #eaeaf6;  /* blue-080 (fonds discrets) */
+  --color-axa-red: #e60000;         /* red-alert-1000 */
   --color-primary: #00008f;
   --color-primary-foreground: #ffffff;
-  --color-background: #f8f8fc;       /* axablue10 */
+  --color-background: #f7f7fb;       /* fond appli (léger bleuté) */
   --color-surface: #ffffff;
-  --color-border: #e6e6e6;           /* gray30 */
-  --color-muted: #666666;            /* gray60 */
-  --color-foreground: #333333;       /* gray80 (text-color) */
-  --color-success: #0c7d3b;          /* green30 */
-  --color-warning: #bd4d2e;          /* orange40 */
-  --color-danger: #c6102e;           /* red30 */
+  --color-border: #e3e3e3;           /* gray-140 */
+  --color-muted: #5c5c5c;            /* gray-800 */
+  --color-foreground: #333333;       /* gray-1000 (texte) */
+  --color-success: #188138;          /* green-1000 */
+  --color-warning: #c84d14;          /* orange-1000 */
+  --color-danger: #e60000;           /* red-alert-1000 */
 
-  --radius-axa: 0.25rem;             /* cards Canopée : 4px */
+  --radius-axa: 0.5rem;              /* 8px (radius Apollo, conteneurs) */
   --font-sans: 'Source Sans 3', 'Source Sans Pro', Arial, sans-serif;
 }
 
@@ -33,7 +33,7 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
   h1 {
-    @apply text-2xl font-bold text-foreground;
+    @apply text-2xl font-bold text-axa-blue;
   }
   h2 {
     @apply text-lg font-semibold text-foreground;
@@ -54,11 +54,11 @@
 @utility card-pad {
   @apply p-6;
 }
-/* Bouton AXA : angles droits, libellé en gras, liseré inférieur en incrustation
+/* Bouton AXA : coins arrondis, libellé en gras, liseré inférieur en incrustation
    (signature visuelle Canopée). */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-none px-4 py-2.5 text-sm
-         font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm
+         font-bold transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed
          focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2
          focus-visible:outline-axa-blue cursor-pointer;
 }
@@ -86,6 +86,10 @@
   }
   .btn-ghost {
     @apply btn bg-transparent text-axa-blue font-semibold border border-border hover:bg-axa-blue-light;
+  }
+  /* Variante ghost rouge — utilisée pour la déconnexion. */
+  .btn-ghost-danger {
+    @apply btn bg-transparent text-axa-red font-semibold border border-axa-red/30 hover:bg-axa-red hover:text-white;
   }
   .btn-success {
     @apply btn bg-success text-white hover:brightness-95;
