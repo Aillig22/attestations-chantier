@@ -124,6 +124,34 @@ CHAMPS_FDR_OBLIGATOIRES = [
 ]
 
 
+# Libellés lisibles des champs du FDR (utilisés pour les demandes de compléments).
+LIBELLES_CHAMPS_FDR = {
+    "assure_nom": "Nom de l'assuré",
+    "assure_ville": "Ville de l'assuré",
+    "assure_numero_contrat": "Numéro de contrat",
+    "chantier_nom": "Nom du chantier",
+    "chantier_ville": "Ville du chantier",
+    "chantier_type": "Type de chantier",
+    "usage": "Usage du chantier",
+    "usage_autre_texte": "Précision usage",
+    "date_debut": "Date de début",
+    "date_fin": "Date de fin",
+    "cout_total": "Coût total",
+    "montant_prestation": "Montant de la prestation",
+    "description_travaux": "Description des travaux",
+    "type_intervention": "Type d'intervention",
+    "activite_couverte": "Activité couverte",
+    "activite_couverte_texte": "Précision activité",
+    "modification_structure": "Modification de structure",
+    "chantier_atypique": "Chantier atypique",
+    "travaux_standards": "Travaux standards",
+}
+
+
+def libelle_champ_fdr(champ: str) -> str:
+    return LIBELLES_CHAMPS_FDR.get(champ, champ)
+
+
 def champs_fdr_manquants(fdr: FDR | None) -> list[str]:
     if fdr is None:
         return list(CHAMPS_FDR_OBLIGATOIRES)

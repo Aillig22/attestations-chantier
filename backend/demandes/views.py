@@ -146,6 +146,10 @@ class DemandeViewSet(viewsets.ModelViewSet):
         demande = self.get_object()
         if demande.statut != Statut.EN_COURS:
             raise ValidationError("Seule une demande en cours peut être traitée.")
+        # Garde-fou : un dossier incomplet n'aurait pas dû être soumis ; on refuse
+        # de rendre une décision dessus (cohérence si des données legacy existent).
+        if not business_rules.is_dossier_complet(demande):
+            raise ValidationError("Le dossier est incomplet (FDR ou pièces manquantes).")
         decision = request.data.get("decision")
         if decision not in (Decision.ACCEPTEE, Decision.REFUSEE):
             raise ValidationError("Décision invalide.")
@@ -172,6 +176,11 @@ class DemandeViewSet(viewsets.ModelViewSet):
         texte = request.data.get("texte", "").strip()
         if not texte:
             raise ValidationError("Précisez les éléments complémentaires demandés.")
+        # Champs du FDR explicitement pointés par le siège (« ping »).
+        champs = request.data.get("champs") or []
+        if champs:
+            libelles = ", ".join(business_rules.libelle_champ_fdr(c) for c in champs)
+            texte = f"Champs concernés : {libelles}.\n{texte}"
         Commentaire.objects.create(demande=demande, auteur=request.user, texte=texte)
         _notifier(demande.created_by, demande,
                   f"Le siège demande des compléments sur {demande.reference}.")
@@ -195,14 +204,15 @@ class DemandeViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get", "put"])
     def attestation(self, request, pk=None):
         demande = self.get_object()
-        attestation, _ = Attestation.objects.get_or_create(demande=demande)
+        attestation, _ = Attestation.objects.get_or_create(
+            demande=demande, defaults={"type": TypeAttestation.DEFINITIVE}
+        )
         if request.method == "GET":
             return Response(AttestationSerializer(attestation).data)
-        # Le type définitif n'est accessible qu'au siège.
-        type_demande = request.data.get("type")
-        if type_demande == TypeAttestation.DEFINITIVE and not request.user.is_siege:
-            raise PermissionDenied("Seul le siège génère l'attestation définitive.")
-        serializer = AttestationSerializer(attestation, data=request.data, partial=True)
+        # L'attestation est générée par le siège, une fois la demande acceptée.
+        self._assert_attestation_editable(demande, request.user)
+        data = {**request.data, "type": TypeAttestation.DEFINITIVE}
+        serializer = AttestationSerializer(attestation, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -210,11 +220,16 @@ class DemandeViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="attestation/valider")
     def valider_attestation(self, request, pk=None):
         demande = self.get_object()
+        self._assert_attestation_editable(demande, request.user)
         attestation = getattr(demande, "attestation", None)
         if attestation is None or not attestation.contenu:
             raise ValidationError("Aucune attestation à valider.")
         attestation.validee = True
         attestation.save(update_fields=["validee", "updated_at"])
+        _notifier(
+            demande.created_by, demande,
+            f"Votre attestation pour {demande.reference} est disponible.",
+        )
         return Response(AttestationSerializer(attestation).data)
 
     @action(detail=True, methods=["get"], url_path="attestation/pdf")
@@ -239,9 +254,11 @@ class DemandeViewSet(viewsets.ModelViewSet):
     # ------------------------------------------------------------------ #
     # Analyse IA
     # ------------------------------------------------------------------ #
-    @action(detail=True, methods=["post"], url_path="analyse-ia")
+    @action(detail=True, methods=["post"], url_path="analyse-ia",
+            permission_classes=[IsAuthenticated, IsSiege])
     def analyse_ia(self, request, pk=None):
         demande = self.get_object()
+        self._assert_attestation_editable(demande, request.user)
         resultat = analyser_coherence(demande)
         analyse, _ = AnalyseIA.objects.update_or_create(
             demande=demande,
@@ -278,6 +295,15 @@ class DemandeViewSet(viewsets.ModelViewSet):
             raise ValidationError("La demande n'est plus modifiable (déjà envoyée).")
         if not self.request.user.is_distributeur:
             raise PermissionDenied("Seul le distributeur peut modifier le dossier.")
+
+    def _assert_attestation_editable(self, demande, user):
+        """L'attestation (et l'analyse IA) est générée par le siège, une fois la demande acceptée."""
+        if not user.is_siege:
+            raise PermissionDenied("Seul le siège génère l'attestation.")
+        if demande.decision != Decision.ACCEPTEE:
+            raise ValidationError(
+                "L'attestation n'est disponible qu'après acceptation de la demande."
+            )
 
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):

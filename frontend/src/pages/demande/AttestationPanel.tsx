@@ -11,15 +11,16 @@ import {
   Heading2,
   Italic,
   List,
+  Lock,
   Save,
   Sparkles,
   Wand2,
 } from 'lucide-react'
 import type { DemandeDetail } from '@/lib/types'
 import { useAttestation } from '@/lib/queries'
-import { useAuth } from '@/lib/auth'
 import { useToast } from '@/components/Toast'
-import { api, apiError, tokenStore } from '@/lib/api'
+import { downloadAttestationPdf } from '@/lib/pdf'
+import { apiError } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 
 function buildPrefill(d: DemandeDetail): string {
@@ -37,15 +38,20 @@ function buildPrefill(d: DemandeDetail): string {
 }
 
 export function AttestationPanel({ demande }: { demande: DemandeDetail }) {
-  const { user } = useAuth()
   const toast = useToast()
   const { query, save, valider, analyse } = useAttestation(demande.id)
   const [preview, setPreview] = useState(false)
+  // HTML figé au moment du basculement en aperçu : fiable même si l'éditeur
+  // vient juste d'être (re)monté.
+  const [previewHtml, setPreviewHtml] = useState('')
+
+  // L'attestation n'est générée qu'une fois la demande acceptée.
+  const accepted = demande.decision === 'ACCEPTEE'
 
   const editor = useEditor({
     extensions: [StarterKit],
     content: '',
-    editorProps: { attributes: { class: 'prose-axa min-h-[320px] p-4 focus:outline-none' } },
+    editorProps: { attributes: { class: 'prose-axa min-h-80 p-4 focus:outline-none' } },
   })
 
   // Charge le contenu existant une fois récupéré.
@@ -58,13 +64,33 @@ export function AttestationPanel({ demande }: { demande: DemandeDetail }) {
 
   if (!editor) return null
 
-  async function onSave(type?: string) {
+  if (!accepted) {
+    return (
+      <section className="card-axa card-pad flex flex-col items-center gap-3 text-center">
+        <Lock size={28} className="text-muted" />
+        <p className="font-medium">Attestation indisponible</p>
+        <p className="help-text max-w-md">
+          L'attestation et l'analyse de cohérence IA sont générées par le siège une fois la
+          demande <strong>acceptée</strong>.
+        </p>
+      </section>
+    )
+  }
+
+  async function onSave() {
     try {
-      await save.mutateAsync({ contenu: editor!.getHTML(), type })
+      await save.mutateAsync({ contenu: editor!.getHTML() })
       toast('success', 'Attestation enregistrée.')
     } catch (err) {
       toast('error', apiError(err))
     }
+  }
+
+  function togglePreview() {
+    setPreview((p) => {
+      if (!p) setPreviewHtml(editor!.getHTML())
+      return !p
+    })
   }
 
   function prefill() {
@@ -74,7 +100,7 @@ export function AttestationPanel({ demande }: { demande: DemandeDetail }) {
 
   async function onValidate() {
     try {
-      await onSave(user?.role === 'SIEGE' ? 'DEFINITIVE' : 'PROJET')
+      await onSave()
       await valider.mutateAsync()
       toast('success', 'Attestation validée.')
     } catch (err) {
@@ -85,12 +111,7 @@ export function AttestationPanel({ demande }: { demande: DemandeDetail }) {
   async function exportPdf() {
     try {
       await onSave()
-      const res = await api.get(`/demandes/${demande.id}/attestation/pdf/`, {
-        responseType: 'blob',
-        headers: { Authorization: `Bearer ${tokenStore.access}` },
-      })
-      const url = URL.createObjectURL(res.data)
-      window.open(url, '_blank')
+      await downloadAttestationPdf(demande.id, demande.reference)
     } catch (err) {
       toast('error', apiError(err))
     }
@@ -132,15 +153,15 @@ export function AttestationPanel({ demande }: { demande: DemandeDetail }) {
           <button className="btn-ghost btn-sm" onClick={prefill}>
             <Wand2 size={14} /> Pré-remplir depuis le FDR
           </button>
-          <button className="btn-ghost btn-sm" onClick={() => setPreview((p) => !p)}>
+          <button className="btn-ghost btn-sm" onClick={togglePreview}>
             <Eye size={14} /> {preview ? 'Éditer' : 'Prévisualiser'}
           </button>
         </div>
 
         {preview ? (
           <div
-            className="prose-axa min-h-[320px] p-4"
-            dangerouslySetInnerHTML={{ __html: editor.getHTML() }}
+            className="prose-axa min-h-80 p-4"
+            dangerouslySetInnerHTML={{ __html: previewHtml }}
           />
         ) : (
           <EditorContent editor={editor} />

@@ -1,26 +1,31 @@
+@import '@fontsource/source-sans-3/400.css';
+@import '@fontsource/source-sans-3/600.css';
+@import '@fontsource/source-sans-3/700.css';
 @import 'tailwindcss';
 
 /* ----------------------------------------------------------------------- */
-/* Design tokens AXA — définis une seule fois, consommés via les utilitaires */
-/* Tailwind (bg-primary, text-axa-blue...) et les classes composant ci-dessous */
+/* Design tokens AXA « Canopée » 2025 — valeurs alignées sur le design       */
+/* system officiel @axa-fr/canopee-css (univers distributeur). Les noms de    */
+/* tokens Canopée sont indiqués en commentaire.                              */
 /* ----------------------------------------------------------------------- */
 @theme {
-  --color-axa-blue: #00008f;
-  --color-axa-blue-dark: #00006b;
-  --color-axa-red: #ff1721;
+  --color-axa-blue: #00008f;        /* axablue80 (brand-primary) */
+  --color-axa-blue-dark: #00005c;   /* axablue100 (hover/inset border) */
+  --color-axa-blue-light: #e6e6ff;  /* axablue40 (fonds discrets) */
+  --color-axa-red: #c6102e;         /* red30 */
   --color-primary: #00008f;
   --color-primary-foreground: #ffffff;
-  --color-background: #f7f7f9;
+  --color-background: #f8f8fc;       /* axablue10 */
   --color-surface: #ffffff;
-  --color-border: #e5e7eb;
-  --color-muted: #6b7280;
-  --color-foreground: #1f2937;
-  --color-success: #16a34a;
-  --color-warning: #d97706;
-  --color-danger: #dc2626;
+  --color-border: #e6e6e6;           /* gray30 */
+  --color-muted: #666666;            /* gray60 */
+  --color-foreground: #333333;       /* gray80 (text-color) */
+  --color-success: #0c7d3b;          /* green30 */
+  --color-warning: #bd4d2e;          /* orange40 */
+  --color-danger: #c6102e;           /* red30 */
 
-  --radius-axa: 0.75rem;
-  --font-sans: 'Source Sans 3', 'Inter', system-ui, sans-serif;
+  --radius-axa: 0.25rem;             /* cards Canopée : 4px */
+  --font-sans: 'Source Sans 3', 'Source Sans Pro', Arial, sans-serif;
 }
 
 @layer base {
@@ -43,15 +48,19 @@
 /* être réutilisées via @apply dans d'autres classes (contrainte Tailwind v4).*/
 /* ----------------------------------------------------------------------- */
 @utility card-axa {
-  @apply bg-surface border border-border rounded-[var(--radius-axa)] shadow-sm;
+  @apply bg-surface border-2 border-transparent rounded-[var(--radius-axa)];
+  box-shadow: 0 0 0.5625rem 0 rgba(0, 0, 0, 0.12);
 }
 @utility card-pad {
   @apply p-6;
 }
+/* Bouton AXA : angles droits, libellé en gras, liseré inférieur en incrustation
+   (signature visuelle Canopée). */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm
-         font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed
-         focus:outline-none focus:ring-2 focus:ring-axa-blue/40 cursor-pointer;
+  @apply inline-flex items-center justify-center gap-2 rounded-none px-4 py-2.5 text-sm
+         font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+         focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2
+         focus-visible:outline-axa-blue cursor-pointer;
 }
 @utility badge {
   @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
@@ -66,18 +75,21 @@
     @apply text-axa-blue font-semibold text-sm uppercase tracking-wide mb-3;
   }
 
-  /* Boutons */
+  /* Boutons — liseré inférieur foncé façon AXA via box-shadow inset. */
   .btn-primary {
     @apply btn bg-axa-blue text-white hover:bg-axa-blue-dark;
+    box-shadow: inset 0 -2px var(--color-axa-blue-dark);
   }
   .btn-danger {
     @apply btn bg-axa-red text-white hover:brightness-90;
+    box-shadow: inset 0 -2px #6d0914; /* red40 */
   }
   .btn-ghost {
-    @apply btn bg-transparent text-foreground hover:bg-background border border-border;
+    @apply btn bg-transparent text-axa-blue font-semibold border border-border hover:bg-axa-blue-light;
   }
   .btn-success {
     @apply btn bg-success text-white hover:brightness-95;
+    box-shadow: inset 0 -2px #084922; /* green40 */
   }
   .btn-sm {
     @apply px-3 py-1.5 text-xs;
@@ -91,7 +103,7 @@
     @apply text-sm font-medium text-foreground;
   }
   .input-axa {
-    @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm
+    @apply w-full rounded-[var(--radius-axa)] border border-border bg-surface px-3 py-2 text-sm
            focus:outline-none focus:ring-2 focus:ring-axa-blue/40 focus:border-axa-blue;
   }
   .help-text {

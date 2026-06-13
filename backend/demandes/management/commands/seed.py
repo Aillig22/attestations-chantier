@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -9,6 +10,7 @@ from demandes.models import (
     Decision,
     Demande,
     FDR,
+    PieceJustificative,
     Statut,
     TypeChantier,
     TypeIntervention,
@@ -105,6 +107,20 @@ class Command(BaseCommand):
             activite_couverte_texte="Activité de génie civil non incluse au contrat initial.",
             travaux_standards=False,
         )
+        # Pièces requises pour d2 : un dossier soumis (EN_COURS) est nécessairement
+        # complet — sinon l'envoi au siège aurait été bloqué.
+        for code, libelle in [
+            ("ATYPIQUE", "note-atypique.pdf"),
+            ("MONTANT", "justificatif-financier.pdf"),
+            ("ACTIVITE", "extension-garantie.pdf"),
+            ("TRAVAUX_NON_STD", "descriptif-technique.pdf"),
+        ]:
+            PieceJustificative.objects.create(
+                demande=d2,
+                type_requis=code,
+                nom_original=libelle,
+                fichier=ContentFile(b"%PDF-1.4 demo", name=libelle),
+            )
 
         # 3. Traité / accepté
         d3 = Demande.objects.create(

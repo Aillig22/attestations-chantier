@@ -91,8 +91,8 @@ export function useDemandeAction(id: number | string) {
       onSuccess: invalidate,
     }),
     complements: useMutation({
-      mutationFn: async (texte: string) =>
-        (await api.post(`/demandes/${id}/demander-complements/`, { texte })).data,
+      mutationFn: async (payload: { texte: string; champs?: string[] }) =>
+        (await api.post(`/demandes/${id}/demander-complements/`, payload)).data,
       onSuccess: invalidate,
     }),
     comment: useMutation({
@@ -144,6 +144,7 @@ export function useAttestation(id: number | string) {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ['attestation', String(id)] })
         qc.invalidateQueries({ queryKey: ['demande', String(id)] })
+        qc.invalidateQueries({ queryKey: ['notifications'] })
       },
     }),
     analyse: useMutation({

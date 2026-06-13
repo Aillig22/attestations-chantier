@@ -4,15 +4,17 @@ import { ArrowLeft, Bell, FileDown } from 'lucide-react'
 import { useDemande, useDemandeAction } from '@/lib/queries'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/components/Toast'
-import { api, apiError, tokenStore } from '@/lib/api'
+import { apiError } from '@/lib/api'
+import { downloadFdrPdf } from '@/lib/pdf'
 import { DecisionBadge, StatutBadge } from '@/components/Badges'
 import { FdrForm } from './demande/FdrForm'
 import { EvaluationPanel } from './demande/EvaluationPanel'
 import { ValidationPanel } from './demande/ValidationPanel'
 import { TraitementPanel } from './demande/TraitementPanel'
 import { AttestationPanel } from './demande/AttestationPanel'
+import { MonAttestationPanel } from './demande/MonAttestationPanel'
 
-type TabId = 'fdr' | 'evaluation' | 'validation' | 'traitement' | 'attestation'
+type TabId = 'fdr' | 'evaluation' | 'validation' | 'traitement' | 'attestation' | 'mon-attestation'
 
 export function DemandeDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -33,7 +35,8 @@ export function DemandeDetailPage() {
     { id: 'evaluation', label: 'Évaluation & pièces', show: true },
     { id: 'validation', label: 'Validation & envoi', show: !isSiege },
     { id: 'traitement', label: 'Traitement siège', show: isSiege },
-    { id: 'attestation', label: 'Attestation & IA', show: true },
+    { id: 'attestation', label: 'Attestation & IA', show: isSiege },
+    { id: 'mon-attestation', label: 'Mon attestation', show: !isSiege },
   ]
 
   async function onRelance() {
@@ -47,11 +50,7 @@ export function DemandeDetailPage() {
 
   async function exportFdrPdf() {
     try {
-      const res = await api.get(`/demandes/${id}/fdr/pdf/`, {
-        responseType: 'blob',
-        headers: { Authorization: `Bearer ${tokenStore.access}` },
-      })
-      window.open(URL.createObjectURL(res.data), '_blank')
+      await downloadFdrPdf(id!, demande?.reference ?? String(id))
     } catch (err) {
       toast('error', apiError(err))
     }
@@ -108,6 +107,7 @@ export function DemandeDetailPage() {
       {tab === 'validation' && <ValidationPanel demande={demande} />}
       {tab === 'traitement' && <TraitementPanel demande={demande} />}
       {tab === 'attestation' && <AttestationPanel demande={demande} />}
+      {tab === 'mon-attestation' && <MonAttestationPanel demande={demande} />}
     </div>
   )
 }

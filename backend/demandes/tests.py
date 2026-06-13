@@ -150,3 +150,57 @@ class APIPermissionTests(APITestCase):
         self.demande.save()
         resp = self.client.post(f"/api/demandes/{self.demande.id}/relance/")
         self.assertEqual(resp.status_code, 200)
+
+
+class AttestationRoleTests(APITestCase):
+    """L'attestation et l'analyse IA sont générées par le siège, après acceptation."""
+
+    def setUp(self):
+        self.agent = User.objects.create_user("agent", password="x", role="DISTRIBUTEUR")
+        self.siege = User.objects.create_user("siege", password="x", role="SIEGE")
+        self.demande = Demande.objects.create(created_by=self.agent, statut=Statut.EN_COURS,
+                                              submitted_at=timezone.now())
+        make_fdr(self.demande)
+
+    def _accepter(self):
+        self.demande.statut = Statut.TRAITE
+        self.demande.decision = Decision.ACCEPTEE
+        self.demande.save()
+
+    def test_distributeur_ne_peut_pas_editer_attestation(self):
+        self._accepter()
+        self.client.force_authenticate(self.agent)
+        resp = self.client.put(f"/api/demandes/{self.demande.id}/attestation/",
+                               {"contenu": "<p>Test</p>"}, format="json")
+        self.assertEqual(resp.status_code, 403)
+
+    def test_siege_ne_peut_pas_editer_avant_acceptation(self):
+        self.client.force_authenticate(self.siege)
+        resp = self.client.put(f"/api/demandes/{self.demande.id}/attestation/",
+                               {"contenu": "<p>Test</p>"}, format="json")
+        self.assertEqual(resp.status_code, 400)
+
+    def test_siege_edite_apres_acceptation(self):
+        self._accepter()
+        self.client.force_authenticate(self.siege)
+        resp = self.client.put(f"/api/demandes/{self.demande.id}/attestation/",
+                               {"contenu": "<p>Test</p>"}, format="json")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data["type"], "DEFINITIVE")
+
+    def test_validation_notifie_le_distributeur(self):
+        self._accepter()
+        self.client.force_authenticate(self.siege)
+        self.client.put(f"/api/demandes/{self.demande.id}/attestation/",
+                        {"contenu": "<p>Test</p>"}, format="json")
+        resp = self.client.post(f"/api/demandes/{self.demande.id}/attestation/valider/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(
+            self.agent.notifications.filter(message__icontains="attestation").exists()
+        )
+
+    def test_distributeur_ne_peut_pas_lancer_ia(self):
+        self._accepter()
+        self.client.force_authenticate(self.agent)
+        resp = self.client.post(f"/api/demandes/{self.demande.id}/analyse-ia/")
+        self.assertEqual(resp.status_code, 403)
