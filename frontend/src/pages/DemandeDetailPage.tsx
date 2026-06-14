@@ -1,11 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Bell, FileDown } from 'lucide-react'
-import { useDemande, useDemandeAction } from '@/lib/queries'
+import { ArrowLeft } from 'lucide-react'
+import { useDemande } from '@/lib/queries'
 import { useAuth } from '@/lib/auth'
-import { useToast } from '@/components/Toast'
-import { apiError } from '@/lib/api'
-import { downloadFdrPdf } from '@/lib/pdf'
 import { DecisionBadge, StatutBadge } from '@/components/Badges'
 import { FdrForm } from './demande/FdrForm'
 import { EvaluationPanel } from './demande/EvaluationPanel'
@@ -20,15 +17,17 @@ export function DemandeDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const toast = useToast()
   const { data: demande, isLoading } = useDemande(id!)
-  const { relance } = useDemandeAction(id!)
   const [tab, setTab] = useState<TabId>('fdr')
 
   if (isLoading || !demande) return <div className="page text-muted">Chargement…</div>
 
   const isSiege = user?.role === 'SIEGE'
-  const editable = !isSiege && demande.statut === 'BROUILLON'
+  // Le distributeur peut éditer un brouillon, ou une demande en cours tant que
+  // le siège a une demande de compléments en attente.
+  const complementEnAttente =
+    Boolean(demande.complement_message) || demande.complement_champs.length > 0
+  const editable = !isSiege && (demande.statut === 'BROUILLON' || complementEnAttente)
 
   const tabs: { id: TabId; label: string; show: boolean }[] = [
     { id: 'fdr', label: 'Formulaire FDR', show: true },
@@ -38,23 +37,6 @@ export function DemandeDetailPage() {
     { id: 'attestation', label: 'Attestation & IA', show: isSiege },
     { id: 'mon-attestation', label: 'Mon attestation', show: !isSiege },
   ]
-
-  async function onRelance() {
-    try {
-      const res = await relance.mutateAsync()
-      toast('success', res.detail)
-    } catch (err) {
-      toast('error', apiError(err))
-    }
-  }
-
-  async function exportFdrPdf() {
-    try {
-      await downloadFdrPdf(id!, demande?.reference ?? String(id))
-    } catch (err) {
-      toast('error', apiError(err))
-    }
-  }
 
   return (
     <div className="page">
@@ -73,20 +55,10 @@ export function DemandeDetailPage() {
             {demande.fdr.assure_nom || 'Assuré non renseigné'} — créée par {demande.created_by_nom}
           </p>
         </div>
-        <div className="flex gap-2">
-          <button className="btn-ghost btn-sm" onClick={exportFdrPdf}>
-            <FileDown size={14} /> FDR PDF
-          </button>
-          {!isSiege && demande.statut === 'EN_COURS' && (
-            <button className="btn-ghost btn-sm" onClick={onRelance} disabled={relance.isPending}>
-              <Bell size={14} /> Relancer
-            </button>
-          )}
-        </div>
       </div>
 
-      {/* Onglets */}
-      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
+      {/* Onglets — collés en haut pour rester accessibles pendant la saisie. */}
+      <div className="sticky top-0 z-20 mb-6 flex gap-1 overflow-x-auto border-b border-border bg-background pt-1">
         {tabs.filter((t) => t.show).map((t) => (
           <button
             key={t.id}

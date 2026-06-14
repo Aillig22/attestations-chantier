@@ -1,31 +1,46 @@
 {% extends "pdf/base.html" %}
-{% block doc_title %}Formulaire de Déclaration du Risque (FDR){% endblock %}
+{% block doc_title %}Formulaire de Déclaration du Risque{% endblock %}
 {% block content %}
-  <h2>Assuré</h2>
-  <table>
-    <tr><td class="label">Nom / raison sociale</td><td>{{ fdr.assure_nom|default:"—" }}</td></tr>
-    <tr><td class="label">Ville</td><td>{{ fdr.assure_ville|default:"—" }}</td></tr>
-    <tr><td class="label">Numéro de contrat</td><td>{{ fdr.assure_numero_contrat|default:"—" }}</td></tr>
+  <h2>L'assuré</h2>
+  <table class="data">
+    <tr><td class="label">Nom / raison sociale</td><td class="value">{{ fdr.assure_nom|default:"—" }}</td></tr>
+    <tr><td class="label">Ville</td><td class="value">{{ fdr.assure_ville|default:"—" }}</td></tr>
+    <tr><td class="label">Numéro de contrat</td><td class="value">{{ fdr.assure_numero_contrat|default:"—" }}</td></tr>
   </table>
 
-  <h2>Chantier</h2>
-  <table>
-    <tr><td class="label">Nom du chantier</td><td>{{ fdr.chantier_nom|default:"—" }}</td></tr>
-    <tr><td class="label">Ville</td><td>{{ fdr.chantier_ville|default:"—" }}</td></tr>
-    <tr><td class="label">Type</td><td>{{ fdr.get_chantier_type_display|default:"—" }}</td></tr>
-    <tr><td class="label">Usage</td><td>{{ fdr.get_usage_display|default:"—" }}{% if fdr.usage_autre_texte %} ({{ fdr.usage_autre_texte }}){% endif %}</td></tr>
-    <tr><td class="label">Modification de structure</td><td>{{ fdr.modification_structure|yesno:"Oui,Non" }}</td></tr>
-    <tr><td class="label">Chantier atypique</td><td>{{ fdr.chantier_atypique|yesno:"Oui,Non" }}</td></tr>
-    <tr><td class="label">Dates</td><td>{{ fdr.date_debut|default:"—" }} → {{ fdr.date_fin|default:"—" }}</td></tr>
-    <tr><td class="label">Coût total</td><td>{% if fdr.cout_total %}{{ fdr.cout_total }} €{% else %}—{% endif %}</td></tr>
+  <h2>Le chantier</h2>
+  <table class="data">
+    <tr><td class="label">Nom du chantier</td><td class="value">{{ fdr.chantier_nom|default:"—" }}</td></tr>
+    <tr><td class="label">Ville</td><td class="value">{{ fdr.chantier_ville|default:"—" }}</td></tr>
+    <tr><td class="label">Type</td><td class="value">{{ fdr.get_chantier_type_display|default:"—" }}</td></tr>
+    <tr><td class="label">Usage</td><td class="value">{{ fdr.get_usage_display|default:"—" }}{% if fdr.usage_autre_texte %} ({{ fdr.usage_autre_texte }}){% endif %}</td></tr>
+    <tr>
+      <td class="label">Modification de structure</td>
+      <td class="value"><span class="pill">{{ fdr.modification_structure|yesno:"Oui,Non" }}</span></td>
+    </tr>
+    <tr>
+      <td class="label">Chantier atypique</td>
+      <td class="value"><span class="pill">{{ fdr.chantier_atypique|yesno:"Oui,Non" }}</span></td>
+    </tr>
+    <tr><td class="label">Dates</td><td class="value">{{ fdr.date_debut|default:"—" }} &rarr; {{ fdr.date_fin|default:"—" }}</td></tr>
+    <tr><td class="label">Coût total</td><td class="value">{% if fdr.cout_total %}{{ fdr.cout_total }} €{% else %}—{% endif %}</td></tr>
   </table>
 
-  <h2>Intervention</h2>
-  <table>
-    <tr><td class="label">Description des travaux</td><td>{{ fdr.description_travaux|default:"—" }}</td></tr>
-    <tr><td class="label">Montant de la prestation</td><td>{% if fdr.montant_prestation %}{{ fdr.montant_prestation }} €{% else %}—{% endif %}</td></tr>
-    <tr><td class="label">Type d'intervention</td><td>{{ fdr.get_type_intervention_display|default:"—" }}</td></tr>
-    <tr><td class="label">Activité couverte par le contrat</td><td>{{ fdr.activite_couverte|yesno:"Oui,Non" }}</td></tr>
-    <tr><td class="label">Travaux standards</td><td>{{ fdr.travaux_standards|yesno:"Oui,Non" }}</td></tr>
+  <h2>L'intervention</h2>
+  <table class="data">
+    <tr><td class="label">Description des travaux</td><td class="value">{{ fdr.description_travaux|default:"—" }}</td></tr>
+    <tr><td class="label">Montant de la prestation</td><td class="value">{% if fdr.montant_prestation %}{{ fdr.montant_prestation }} €{% else %}—{% endif %}</td></tr>
+    <tr><td class="label">Type d'intervention</td><td class="value">{{ fdr.get_type_intervention_display|default:"—" }}</td></tr>
+    <tr>
+      <td class="label">Activité couverte par le contrat</td>
+      <td class="value">
+        <span class="pill">{{ fdr.activite_couverte|yesno:"Oui,Non" }}</span>
+        {% if not fdr.activite_couverte and fdr.activite_couverte_texte %}<br />{{ fdr.activite_couverte_texte }}{% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Travaux standards</td>
+      <td class="value"><span class="pill">{{ fdr.travaux_standards|yesno:"Oui,Non" }}</span></td>
+    </tr>
   </table>
 {% endblock %}

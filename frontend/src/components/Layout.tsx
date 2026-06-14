@@ -36,7 +36,7 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen bg-background p-0 md:p-3">
-      <aside className="hidden w-64 shrink-0 flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm md:flex">
+      <aside className="hidden w-64 shrink-0 flex-col self-start overflow-y-auto rounded-2xl border border-border bg-surface p-4 shadow-sm md:sticky md:top-3 md:flex md:h-[calc(100vh-1.5rem)]">
         <div className="mb-7 flex items-center gap-3 px-1">
           <img src={logoAxa} alt="AXA" className="h-11 w-11 shrink-0 rounded-lg" />
           <div className="leading-tight">

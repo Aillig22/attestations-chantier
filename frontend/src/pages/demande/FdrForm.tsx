@@ -1,54 +1,128 @@
 import type { InputHTMLAttributes, ReactNode } from 'react'
-import { forwardRef } from 'react'
-import { useForm } from 'react-hook-form'
-import { AlertTriangle } from 'lucide-react'
+import { forwardRef, useEffect, useRef } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { AlertTriangle, MessageSquareWarning, Save } from 'lucide-react'
 import type { DemandeDetail, FDR } from '@/lib/types'
-import { useSaveFdr } from '@/lib/queries'
+import { useEvaluation, useSaveFdr } from '@/lib/queries'
 import { useToast } from '@/components/Toast'
 import { apiError } from '@/lib/api'
+import { cn } from '@/lib/utils'
+import { FDR_FIELD_LABELS } from '@/lib/constants'
+import { FormSelect } from '@/components/FormSelect'
 
 interface Props {
   demande: DemandeDetail
   readOnly?: boolean
 }
 
+// Champs obligatoires du FDR (miroir de CHAMPS_FDR_OBLIGATOIRES côté backend).
+// Sert à détecter si un brouillon a déjà été commencé.
+const CHAMPS_FDR_OBLIGATOIRES: (keyof FDR)[] = [
+  'assure_nom',
+  'assure_ville',
+  'assure_numero_contrat',
+  'chantier_nom',
+  'chantier_ville',
+  'chantier_type',
+  'usage',
+  'date_debut',
+  'date_fin',
+  'cout_total',
+  'description_travaux',
+  'type_intervention',
+]
+
 export function FdrForm({ demande, readOnly }: Props) {
   const toast = useToast()
   const save = useSaveFdr(demande.id)
-  const { register, handleSubmit, watch } = useForm<FDR>({ defaultValues: demande.fdr })
+  const { data: evaluation } = useEvaluation(demande.id)
+  const { register, control, watch, getValues, formState } = useForm<FDR>({
+    defaultValues: demande.fdr,
+  })
 
+  const values = watch()
   // Champs surveillés pour l'affichage conditionnel.
-  const chantierType = watch('chantier_type')
-  const usage = watch('usage')
-  const modifStructure = watch('modification_structure')
-  const atypique = watch('chantier_atypique')
-  const activiteCouverte = watch('activite_couverte')
-  const travauxStandards = watch('travaux_standards')
+  const chantierType = values.chantier_type
+  const usage = values.usage
+  const modifStructure = values.modification_structure
+  const atypique = values.chantier_atypique
+  const activiteCouverte = values.activite_couverte
+  const travauxStandards = values.travaux_standards
 
-  async function onSubmit(values: FDR) {
-    try {
-      await save.mutateAsync(values)
-      toast('success', 'FDR enregistré.')
-    } catch (err) {
-      toast('error', apiError(err))
-    }
+  // On ne signale les champs manquants en rouge que si le formulaire a déjà été
+  // commencé puis quitté sans être terminé (visite de retour). Sur un brouillon
+  // vierge, on n'affiche rien en rouge tant que l'utilisateur saisit.
+  const dejaCommence = useRef(
+    CHAMPS_FDR_OBLIGATOIRES.some((c) => Boolean(demande.fdr[c])),
+  ).current
+
+  // Champs pointés par le siège dans une demande de compléments.
+  const champsComplement = new Set(demande.complement_champs ?? [])
+
+  // Champs obligatoires non renseignés (vérité serveur), affichés en rouge.
+  // On masque le rouge dès que la valeur courante est saisie, sans attendre la
+  // prochaine sauvegarde.
+  const manquants = new Set(evaluation?.champs_fdr_manquants ?? [])
+  const invalid = (name: keyof FDR) => {
+    if (readOnly) return false
+    // Champ signalé par le siège : en rouge tant qu'il n'a pas été retouché.
+    if (champsComplement.has(name) && !formState.dirtyFields[name]) return true
+    // Champ obligatoire manquant (seulement si le brouillon a déjà été commencé).
+    return dejaCommence && manquants.has(name) && !values[name]
   }
+
+  // Sauvegarde automatique : on enregistre dès que l'utilisateur quitte
+  // l'écran du formulaire (changement d'onglet ou navigation), si des champs
+  // ont été modifiés. Une ref garde les dernières valeurs sans relancer l'effet.
+  const latest = useRef({ getValues, isDirty: formState.isDirty, readOnly, save, toast })
+  latest.current = { getValues, isDirty: formState.isDirty, readOnly, save, toast }
+  useEffect(() => {
+    return () => {
+      const { getValues, isDirty, readOnly, save, toast } = latest.current
+      if (!readOnly && isDirty) {
+        save.mutate(getValues(), {
+          onError: (err) => toast('error', apiError(err)),
+        })
+      }
+    }
+  }, [])
 
   const disabled = readOnly
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+    <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-6">
+      {demande.complement_message && (
+        <section className="card-axa card-pad border-l-4 border-l-axa-red">
+          <div className="flex items-start gap-3">
+            <MessageSquareWarning className="mt-0.5 shrink-0 text-axa-red" size={20} />
+            <div className="flex-1">
+              <p className="font-medium text-axa-red">Compléments demandés par le siège</p>
+              <p className="mt-1 whitespace-pre-line text-sm">{demande.complement_message}</p>
+              {champsComplement.size > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {[...champsComplement].map((c) => (
+                    <span key={c} className="badge bg-axa-red/10 text-axa-red">
+                      {FDR_FIELD_LABELS[c] ?? c}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Assuré */}
       <section className="card-axa card-pad">
         <p className="section-title">L'assuré</p>
         <div className="grid gap-4 md:grid-cols-3">
-          <Field label="Nom / raison sociale">
+          <Field label="Nom / raison sociale" invalid={invalid('assure_nom')}>
             <input className="input-axa" disabled={disabled} {...register('assure_nom')} />
           </Field>
-          <Field label="Ville">
+          <Field label="Ville" invalid={invalid('assure_ville')}>
             <input className="input-axa" disabled={disabled} {...register('assure_ville')} />
           </Field>
-          <Field label="Numéro de contrat">
+          <Field label="Numéro de contrat" invalid={invalid('assure_numero_contrat')}>
             <input className="input-axa" disabled={disabled} {...register('assure_numero_contrat')} />
           </Field>
         </div>
@@ -58,18 +132,28 @@ export function FdrForm({ demande, readOnly }: Props) {
       <section className="card-axa card-pad">
         <p className="section-title">Le chantier</p>
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Nom du chantier">
+          <Field label="Nom du chantier" invalid={invalid('chantier_nom')}>
             <input className="input-axa" disabled={disabled} {...register('chantier_nom')} />
           </Field>
-          <Field label="Ville">
+          <Field label="Ville" invalid={invalid('chantier_ville')}>
             <input className="input-axa" disabled={disabled} {...register('chantier_ville')} />
           </Field>
-          <Field label="Type">
-            <select className="input-axa" disabled={disabled} {...register('chantier_type')}>
-              <option value="">—</option>
-              <option value="NEUVE">Construction neuve</option>
-              <option value="RENOVATION">Rénovation</option>
-            </select>
+          <Field label="Type" invalid={invalid('chantier_type')}>
+            <Controller
+              control={control}
+              name="chantier_type"
+              render={({ field }) => (
+                <FormSelect
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  disabled={disabled}
+                  options={[
+                    { value: 'NEUVE', label: 'Construction neuve' },
+                    { value: 'RENOVATION', label: 'Rénovation' },
+                  ]}
+                />
+              )}
+            />
           </Field>
           {chantierType === 'RENOVATION' && (
             <Field label="Modification de structure ?">
@@ -83,17 +167,27 @@ export function FdrForm({ demande, readOnly }: Props) {
         )}
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <Field label="Usage">
-            <select className="input-axa" disabled={disabled} {...register('usage')}>
-              <option value="">—</option>
-              <option value="HABITATION">Habitation</option>
-              <option value="BUREAU">Bureau</option>
-              <option value="COMMERCE">Commerce</option>
-              <option value="AUTRE">Autre</option>
-            </select>
+          <Field label="Usage" invalid={invalid('usage')}>
+            <Controller
+              control={control}
+              name="usage"
+              render={({ field }) => (
+                <FormSelect
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  disabled={disabled}
+                  options={[
+                    { value: 'HABITATION', label: 'Habitation' },
+                    { value: 'BUREAU', label: 'Bureau' },
+                    { value: 'COMMERCE', label: 'Commerce' },
+                    { value: 'AUTRE', label: 'Autre' },
+                  ]}
+                />
+              )}
+            />
           </Field>
           {usage === 'AUTRE' && (
-            <Field label="Précisez l'usage">
+            <Field label="Précisez l'usage" invalid={invalid('usage_autre_texte')}>
               <input className="input-axa" disabled={disabled} {...register('usage_autre_texte')} />
             </Field>
           )}
@@ -108,13 +202,13 @@ export function FdrForm({ demande, readOnly }: Props) {
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <Field label="Date de début">
+          <Field label="Date de début" invalid={invalid('date_debut')}>
             <input type="date" className="input-axa" disabled={disabled} {...register('date_debut')} />
           </Field>
-          <Field label="Date de fin">
+          <Field label="Date de fin" invalid={invalid('date_fin')}>
             <input type="date" className="input-axa" disabled={disabled} {...register('date_fin')} />
           </Field>
-          <Field label="Coût total (€)">
+          <Field label="Coût total (€)" invalid={invalid('cout_total')}>
             <input type="number" step="0.01" className="input-axa" disabled={disabled} {...register('cout_total')} />
           </Field>
         </div>
@@ -127,18 +221,28 @@ export function FdrForm({ demande, readOnly }: Props) {
       <section className="card-axa card-pad">
         <p className="section-title">L'intervention</p>
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Description des travaux">
+          <Field label="Description des travaux" invalid={invalid('description_travaux')}>
             <textarea className="input-axa" rows={2} disabled={disabled} {...register('description_travaux')} />
           </Field>
           <Field label="Montant de la prestation (€)">
             <input type="number" step="0.01" className="input-axa" disabled={disabled} {...register('montant_prestation')} />
           </Field>
-          <Field label="Type d'intervention">
-            <select className="input-axa" disabled={disabled} {...register('type_intervention')}>
-              <option value="">—</option>
-              <option value="ENTREPRISE_PRINCIPALE">Entreprise principale</option>
-              <option value="SOUS_TRAITANT">Sous-traitant</option>
-            </select>
+          <Field label="Type d'intervention" invalid={invalid('type_intervention')}>
+            <Controller
+              control={control}
+              name="type_intervention"
+              render={({ field }) => (
+                <FormSelect
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  disabled={disabled}
+                  options={[
+                    { value: 'ENTREPRISE_PRINCIPALE', label: 'Entreprise principale' },
+                    { value: 'SOUS_TRAITANT', label: 'Sous-traitant' },
+                  ]}
+                />
+              )}
+            />
           </Field>
         </div>
 
@@ -147,7 +251,7 @@ export function FdrForm({ demande, readOnly }: Props) {
             <Checkbox label="Oui, l'activité est couverte" disabled={disabled} {...register('activite_couverte')} />
           </Field>
           {!activiteCouverte && (
-            <Field label="Précisez (obligatoire)">
+            <Field label="Précisez (obligatoire)" invalid={invalid('activite_couverte_texte')}>
               <textarea className="input-axa" rows={2} disabled={disabled} {...register('activite_couverte_texte')} />
             </Field>
           )}
@@ -163,20 +267,32 @@ export function FdrForm({ demande, readOnly }: Props) {
       </section>
 
       {!readOnly && (
-        <div className="flex justify-end">
-          <button type="submit" className="btn-primary" disabled={save.isPending}>
-            {save.isPending ? 'Enregistrement…' : 'Enregistrer le FDR'}
-          </button>
-        </div>
+        <p className="flex items-center gap-1.5 text-xs text-muted">
+          <Save size={13} className="shrink-0 text-axa-blue" />
+          {save.isPending
+            ? 'Enregistrement…'
+            : 'Vos modifications sont enregistrées automatiquement lorsque vous quittez le formulaire.'}
+        </p>
       )}
     </form>
   )
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  label,
+  children,
+  invalid,
+}: {
+  label: string
+  children: ReactNode
+  invalid?: boolean
+}) {
   return (
-    <div className="form-row mb-0">
-      <label className="label-axa">{label}</label>
+    <div className={cn('form-row mb-0', invalid && 'field-invalid')}>
+      <label className="label-axa flex items-center gap-2">
+        {label}
+        {invalid && <span className="text-xs font-normal">À renseigner</span>}
+      </label>
       {children}
     </div>
   )

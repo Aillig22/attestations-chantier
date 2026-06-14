@@ -82,6 +82,11 @@ class DemandeListSerializer(serializers.ModelSerializer):
     assure_nom = serializers.CharField(source="fdr.assure_nom", read_only=True, default="")
     chantier_nom = serializers.CharField(source="fdr.chantier_nom", read_only=True, default="")
     created_by_nom = serializers.CharField(source="created_by.get_full_name", read_only=True)
+    # Adresse de contact du siège (pour la relance) — fournie via le contexte.
+    siege_email = serializers.SerializerMethodField()
+
+    def get_siege_email(self, obj):
+        return self.context.get("siege_email", "")
 
     class Meta:
         model = Demande
@@ -96,6 +101,7 @@ class DemandeListSerializer(serializers.ModelSerializer):
             "created_at",
             "submitted_at",
             "last_relance_at",
+            "siege_email",
         )
 
 
@@ -106,7 +112,11 @@ class DemandeDetailSerializer(serializers.ModelSerializer):
     analyse_ia = AnalyseIASerializer(read_only=True)
     commentaires = CommentaireSerializer(many=True, read_only=True)
     created_by_nom = serializers.CharField(source="created_by.get_full_name", read_only=True)
+    siege_email = serializers.SerializerMethodField()
     evaluation = serializers.SerializerMethodField()
+
+    def get_siege_email(self, obj):
+        return self.context.get("siege_email", "")
 
     class Meta:
         model = Demande
@@ -122,6 +132,9 @@ class DemandeDetailSerializer(serializers.ModelSerializer):
             "submitted_at",
             "traite_at",
             "last_relance_at",
+            "complement_message",
+            "complement_champs",
+            "siege_email",
             "fdr",
             "pieces",
             "attestation",

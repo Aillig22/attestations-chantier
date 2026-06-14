@@ -53,6 +53,17 @@
   a {
     @apply text-axa-blue hover:underline;
   }
+  /* Tout bouton/élément cliquable actif affiche le curseur main ; les éléments
+     désactivés affichent le curseur « interdit ». */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  label:has(> input[type='checkbox']),
+  summary {
+    @apply cursor-pointer;
+  }
+  button:disabled {
+    @apply cursor-not-allowed;
+  }
 }
 
 /* ----------------------------------------------------------------------- */
@@ -127,6 +138,15 @@
   }
   .error-text {
     @apply text-xs text-danger;
+  }
+  /* Champ obligatoire non renseigné : libellé + contour en rouge AXA.
+     Cible les inputs/textarea (.input-axa) et le trigger du Select Radix. */
+  .field-invalid .label-axa {
+    @apply text-axa-red;
+  }
+  .field-invalid .input-axa,
+  .field-invalid button[role='combobox'] {
+    @apply border-axa-red ring-1 ring-axa-red/30;
   }
 
   /* Pastilles de risque — Data palette AXA en teintes douces. */

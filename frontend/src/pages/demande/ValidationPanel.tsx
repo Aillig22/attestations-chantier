@@ -1,8 +1,9 @@
-import { Send } from 'lucide-react'
+import { FileDown, Send } from 'lucide-react'
 import type { DemandeDetail } from '@/lib/types'
 import { useDemandeAction, useEvaluation } from '@/lib/queries'
 import { useToast } from '@/components/Toast'
 import { apiError } from '@/lib/api'
+import { downloadFdrPdf } from '@/lib/pdf'
 import { FDR_FIELD_LABELS } from '@/lib/constants'
 import { formatDate, formatEuro } from '@/lib/utils'
 
@@ -11,11 +12,24 @@ export function ValidationPanel({ demande }: { demande: DemandeDetail }) {
   const { submit } = useDemandeAction(demande.id)
   const toast = useToast()
   const fdr = demande.fdr
+  // Des compléments demandés par le siège rouvrent l'envoi même en cours.
+  const complementEnAttente =
+    Boolean(demande.complement_message) || demande.complement_champs.length > 0
+  // À envoyer : brouillon initial, ou demande en cours avec compléments à fournir.
+  const aEnvoyer = demande.statut === 'BROUILLON' || complementEnAttente
 
   async function onSubmit() {
     try {
       await submit.mutateAsync()
-      toast('success', 'Demande envoyée au siège.')
+      toast('success', complementEnAttente ? 'Demande renvoyée au siège.' : 'Demande envoyée au siège.')
+    } catch (err) {
+      toast('error', apiError(err))
+    }
+  }
+
+  async function onDownloadFdr() {
+    try {
+      await downloadFdrPdf(demande.id, demande.reference)
     } catch (err) {
       toast('error', apiError(err))
     }
@@ -63,16 +77,29 @@ export function ValidationPanel({ demande }: { demande: DemandeDetail }) {
         </section>
       )}
 
-      <div className="flex items-center justify-end gap-3">
-        <span className="help-text">Le FDR est sauvegardé depuis l'onglet « Formulaire FDR ».</span>
-        <button
-          className="btn-primary"
-          onClick={onSubmit}
-          disabled={submit.isPending || !evaluation?.dossier_complet}
-        >
-          <Send size={16} /> Envoyer au siège
-        </button>
-      </div>
+      {aEnvoyer ? (
+        <div className="flex items-center justify-end gap-3">
+          <span className="help-text">
+            {complementEnAttente
+              ? 'Complétez le dossier puis renvoyez-le au siège.'
+              : 'Le FDR est enregistré depuis l’onglet « Formulaire FDR ».'}
+          </span>
+          <button
+            className="btn-primary"
+            onClick={onSubmit}
+            disabled={submit.isPending || !evaluation?.dossier_complet}
+          >
+            <Send size={16} /> {complementEnAttente ? 'Renvoyer au siège' : 'Envoyer au siège'}
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-end gap-3">
+          <span className="help-text">La demande a été envoyée au siège.</span>
+          <button className="btn-ghost" onClick={onDownloadFdr}>
+            <FileDown size={16} /> Télécharger le FDR en PDF
+          </button>
+        </div>
+      )}
     </div>
   )
 }

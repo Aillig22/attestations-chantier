@@ -50,10 +50,37 @@ export function useNotifications() {
   })
 }
 
+export function useMarkNotificationsRead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (ids: number[]) => {
+      await Promise.all(ids.map((id) => api.post(`/notifications/${id}/lue/`, {})))
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+  })
+}
+
 export function useCreateDemande() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async () => (await api.post<DemandeDetail>('/demandes/', {})).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['demandes'] }),
+  })
+}
+
+export function useRelanceDemande() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number | string) =>
+      (await api.post(`/demandes/${id}/relance/`, {})).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['demandes'] }),
+  })
+}
+
+export function useDeleteDemande() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number | string) => (await api.delete(`/demandes/${id}/`)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['demandes'] }),
   })
 }

@@ -105,12 +105,15 @@ export interface DemandeListItem {
   created_at: string
   submitted_at: string | null
   last_relance_at: string | null
+  siege_email: string
 }
 
 export interface DemandeDetail extends DemandeListItem {
   motif_refus: string
   updated_at: string
   traite_at: string | null
+  complement_message: string
+  complement_champs: string[]
   fdr: FDR
   pieces: Piece[]
   attestation: Attestation | null

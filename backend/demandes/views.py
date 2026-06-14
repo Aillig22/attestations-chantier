@@ -9,6 +9,8 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.models import Role, User
+
 from . import business_rules, pdf
 from .ai_coherence import analyser_coherence
 from .models import (
@@ -62,11 +64,33 @@ class DemandeViewSet(viewsets.ModelViewSet):
             return DemandeListSerializer
         return DemandeDetailSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        # Adresse de contact du siège pour la relance (premier compte siège
+        # disposant d'un e-mail).
+        context["siege_email"] = (
+            User.objects.filter(role=Role.SIEGE)
+            .exclude(email="")
+            .values_list("email", flat=True)
+            .first()
+            or ""
+        )
+        return context
+
     def perform_create(self, serializer):
         if not self.request.user.is_distributeur:
             raise PermissionDenied("Seul un distributeur peut créer une demande.")
         demande = serializer.save(created_by=self.request.user)
         FDR.objects.create(demande=demande)
+
+    def perform_destroy(self, instance):
+        # Seul le distributeur propriétaire peut supprimer, et uniquement un
+        # brouillon (une demande envoyée au siège reste tracée).
+        if not self.request.user.is_distributeur:
+            raise PermissionDenied("Seul le distributeur peut supprimer une demande.")
+        if instance.statut != Statut.BROUILLON:
+            raise ValidationError("Seul un brouillon peut être supprimé.")
+        instance.delete()
 
     # ------------------------------------------------------------------ #
     # FDR
@@ -128,14 +152,29 @@ class DemandeViewSet(viewsets.ModelViewSet):
         demande = self.get_object()
         if not request.user.is_distributeur:
             raise PermissionDenied("Seul le distributeur peut envoyer la demande.")
-        if not business_rules.transition_autorisee(demande.statut, Statut.EN_COURS):
+        complement_en_attente = bool(demande.complement_message or demande.complement_champs)
+        premiere_soumission = business_rules.transition_autorisee(demande.statut, Statut.EN_COURS)
+        renvoi = demande.statut == Statut.EN_COURS and complement_en_attente
+        if not (premiere_soumission or renvoi):
             raise ValidationError("La demande ne peut pas être envoyée depuis son statut actuel.")
         if not business_rules.is_dossier_complet(demande):
             raise ValidationError("Le dossier est incomplet (FDR ou pièces manquantes).")
         demande.statut = Statut.EN_COURS
         demande.submitted_at = timezone.now()
-        demande.save(update_fields=["statut", "submitted_at", "updated_at"])
-        _notifier(demande.created_by, demande, f"Demande {demande.reference} envoyée au siège.")
+        # Une éventuelle demande de compléments est considérée comme satisfaite.
+        demande.complement_message = ""
+        demande.complement_champs = []
+        demande.save(update_fields=[
+            "statut", "submitted_at", "complement_message", "complement_champs", "updated_at",
+        ])
+        # Le distributeur n'est pas notifié de son propre envoi ; en revanche le
+        # siège est averti qu'une nouvelle demande est à traiter.
+        auteur = demande.created_by.get_full_name() or demande.created_by.username
+        for agent in User.objects.filter(role=Role.SIEGE):
+            _notifier(
+                agent, demande,
+                f"Nouvelle demande {demande.reference} reçue de {auteur}.",
+            )
         return Response(DemandeDetailSerializer(demande, context={"request": request}).data)
 
     # ------------------------------------------------------------------ #
@@ -173,15 +212,24 @@ class DemandeViewSet(viewsets.ModelViewSet):
             permission_classes=[IsAuthenticated, IsSiege])
     def demander_complements(self, request, pk=None):
         demande = self.get_object()
+        if demande.statut != Statut.EN_COURS:
+            raise ValidationError("Seule une demande en cours peut faire l'objet de compléments.")
         texte = request.data.get("texte", "").strip()
         if not texte:
             raise ValidationError("Précisez les éléments complémentaires demandés.")
         # Champs du FDR explicitement pointés par le siège (« ping »).
         champs = request.data.get("champs") or []
+        # Trace historique dans les commentaires (avec libellés lisibles).
+        texte_commentaire = texte
         if champs:
             libelles = ", ".join(business_rules.libelle_champ_fdr(c) for c in champs)
-            texte = f"Champs concernés : {libelles}.\n{texte}"
-        Commentaire.objects.create(demande=demande, auteur=request.user, texte=texte)
+            texte_commentaire = f"Champs concernés : {libelles}.\n{texte}"
+        Commentaire.objects.create(demande=demande, auteur=request.user, texte=texte_commentaire)
+        # La demande reste « en cours » mais devient éditable par le distributeur
+        # tant que la demande de compléments n'est pas satisfaite (renvoi).
+        demande.complement_message = texte
+        demande.complement_champs = list(champs)
+        demande.save(update_fields=["complement_message", "complement_champs", "updated_at"])
         _notifier(demande.created_by, demande,
                   f"Le siège demande des compléments sur {demande.reference}.")
         return Response({"detail": "Demande de compléments envoyée."})
@@ -290,8 +338,13 @@ class DemandeViewSet(viewsets.ModelViewSet):
     # Helpers
     # ------------------------------------------------------------------ #
     def _assert_modifiable(self, demande):
-        """Le FDR et les pièces ne sont éditables qu'au stade BROUILLON par le distributeur."""
-        if demande.statut != Statut.BROUILLON:
+        """Le FDR et les pièces sont éditables par le distributeur au stade BROUILLON,
+        ou en cours tant qu'une demande de compléments du siège reste en attente."""
+        complement_en_attente = bool(demande.complement_message or demande.complement_champs)
+        editable = demande.statut == Statut.BROUILLON or (
+            demande.statut == Statut.EN_COURS and complement_en_attente
+        )
+        if not editable:
             raise ValidationError("La demande n'est plus modifiable (déjà envoyée).")
         if not self.request.user.is_distributeur:
             raise PermissionDenied("Seul le distributeur peut modifier le dossier.")

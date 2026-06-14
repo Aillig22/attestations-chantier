@@ -3,28 +3,120 @@
 <head>
   <meta charset="utf-8" />
   <style>
-    @page { size: A4; margin: 2cm; }
-    body { font-family: Helvetica, Arial, sans-serif; color: #1f2937; font-size: 11px; }
-    .header { border-bottom: 3px solid #00008f; padding-bottom: 10px; margin-bottom: 20px; }
-    .brand { color: #00008f; font-size: 22px; font-weight: bold; }
-    .doc-title { font-size: 16px; font-weight: bold; margin-top: 4px; }
-    .ref { color: #6b7280; font-size: 10px; }
-    h2 { color: #00008f; font-size: 13px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-top: 18px; }
-    table { width: 100%; border-collapse: collapse; }
-    td { padding: 4px 6px; vertical-align: top; }
-    td.label { color: #6b7280; width: 40%; }
-    .footer { margin-top: 30px; font-size: 9px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+    /* xhtml2pdf : mise en page par frames (header / contenu / footer répétés
+       sur chaque page). Pas de flexbox ni de SVG — on s'appuie sur des tables. */
+    @page {
+      size: a4 portrait;
+      margin: 3.1cm 1.6cm 2.3cm 1.6cm;
+
+      @frame header_frame {
+        -pdf-frame-content: header_content;
+        top: 0.9cm; left: 1.6cm; width: 17.8cm; height: 2.2cm;
+      }
+      @frame content_frame {
+        top: 3.1cm; left: 1.6cm; width: 17.8cm; height: 23.3cm;
+      }
+      @frame footer_frame {
+        -pdf-frame-content: footer_content;
+        bottom: 0.9cm; left: 1.6cm; width: 17.8cm; height: 1.1cm;
+      }
+    }
+
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      color: #333333;
+      font-size: 10.5px;
+      line-height: 1.45;
+    }
+
+    /* ---------- En-tête ---------- */
+    table.brandbar { width: 100%; background-color: #00008f; }
+    table.brandbar td { padding: 9px 14px; vertical-align: middle; }
+    .brand-sub { color: #ffffff; font-size: 11px; font-weight: bold; }
+    .doc-type { color: #ffffff; font-size: 12px; font-weight: bold; }
+    /* Barre rouge d'accent sous le bandeau (signature AXA). */
+    table.accent { width: 100%; margin: 0; border-collapse: collapse; }
+    table.accent td { background-color: #e60000; line-height: 6px; font-size: 1px; padding: 0; }
+
+    /* ---------- Méta (référence / date) ---------- */
+    .meta { color: #5c5c5c; font-size: 8.5px; margin: 0 0 6px 0; }
+
+    /* ---------- Titres de section ---------- */
+    h2 {
+      color: #00008f;
+      font-size: 12px;
+      font-weight: bold;
+      margin: 16px 0 0 0;
+      padding: 6px 9px;
+      background-color: #eaeaf6;
+      border-left: 4px solid #00008f;
+    }
+
+    /* ---------- Tableaux de données ---------- */
+    table.data { width: 100%; border-collapse: collapse; margin: 0 0 4px 0; }
+    table.data td {
+      padding: 6px 9px;
+      border-bottom: 1px solid #e3e3e3;
+      vertical-align: top;
+    }
+    table.data td.label {
+      color: #5c5c5c;
+      width: 38%;
+      background-color: #f7f7fb;
+    }
+    table.data td.value { color: #333333; }
+
+    .pill {
+      background-color: #eaeaf6;
+      color: #00008f;
+      font-size: 9px;
+      font-weight: bold;
+      padding: 2px 8px;
+    }
+    .pill-ok { background-color: #e3f3e8; color: #188138; }
+    .pill-no { background-color: #fde6e6; color: #e60000; }
+
+    /* ---------- Pied de page ---------- */
+    .footer {
+      color: #9a9a9a;
+      font-size: 8px;
+      border-top: 1px solid #e3e3e3;
+      padding-top: 6px;
+    }
+    .footer table { width: 100%; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="brand">AXA</div>
-    <div class="doc-title">{% block doc_title %}{% endblock %}</div>
-    <div class="ref">Référence : {{ demande.reference }} — généré le {% now "d/m/Y H:i" %}</div>
+  <!-- En-tête répété -->
+  <div id="header_content">
+    <table class="brandbar">
+      <tr>
+        <td width="60"><img src="{{ logo_data_uri }}" width="50" height="50" alt="AXA" /></td>
+        <td><span class="brand-sub">Attestations de chantier</span></td>
+        <td align="right">
+          <span class="doc-type">{% block doc_title %}{% endblock %}</span>
+        </td>
+      </tr>
+    </table>
+    <table class="accent"><tr><td height="6">&nbsp;</td></tr></table>
   </div>
+
+  <!-- Pied de page répété -->
+  <div id="footer_content">
+    <div class="footer">
+      <table>
+        <tr>
+          <td>Plateforme Attestations de Chantier — AXA · Document à usage interne</td>
+          <td align="right">Page <pdf:pagenumber /> / <pdf:pagecount /></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Contenu -->
+  <p class="meta">
+    Référence&nbsp;: <b>{{ demande.reference }}</b> &nbsp;·&nbsp; Généré le {% now "d/m/Y à H:i" %}
+  </p>
   {% block content %}{% endblock %}
-  <div class="footer">
-    Document généré automatiquement par la plateforme Attestations de Chantier — AXA. Usage interne.
-  </div>
 </body>
 </html>

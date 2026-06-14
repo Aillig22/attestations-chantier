@@ -1,10 +1,35 @@
 {% extends "pdf/base.html" %}
-{% block doc_title %}Attestation de Chantier{% if attestation.type == "DEFINITIVE" %} (définitive){% else %} (projet){% endif %}{% endblock %}
+{% block doc_title %}Attestation de chantier{% endblock %}
 {% block content %}
-  <div class="attestation-body">
-    {{ attestation.contenu|safe }}
+  <p style="margin: 2px 0 10px 0;">
+    <span class="pill">{% if attestation.type == "DEFINITIVE" %}Définitive{% else %}Provisoire{% endif %}</span>
+  </p>
+
+  <div class="attestation-body" style="padding: 4px 2px; font-size: 11px;">
+    {{ attestation.contenu|default:"<p>—</p>"|safe }}
   </div>
+
   {% if attestation.validee %}
-    <p style="margin-top:40px;color:#16a34a;font-weight:bold;">✔ Attestation validée</p>
+    <table style="width: 100%; margin-top: 26px;">
+      <tr>
+        <td>&nbsp;</td>
+        <td align="right" style="width: 7cm;">
+          <table style="width: 100%; border: 2px solid #188138; background-color: #e3f3e8;">
+            <tr>
+              <td style="padding: 10px 14px; color: #188138;">
+                <span style="font-size: 12px; font-weight: bold;">&#10003; Attestation validée</span><br />
+                <span style="font-size: 8.5px; color: #0e6b49;">
+                  Document authentifié par le siège AXA — {{ demande.reference }}
+                </span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  {% else %}
+    <p style="margin-top: 22px; padding: 8px 12px; background-color: #fff7e6; border-left: 4px solid #c84d14; color: #8a3a10; font-size: 9.5px;">
+      Document de travail — cette attestation n'a pas encore été validée par le siège.
+    </p>
   {% endif %}
 {% endblock %}

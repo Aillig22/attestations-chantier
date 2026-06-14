@@ -5,6 +5,7 @@ import { useEvaluation, usePieces } from '@/lib/queries'
 import { useToast } from '@/components/Toast'
 import { apiError } from '@/lib/api'
 import { RiskGauge } from '@/components/RiskGauge'
+import { FDR_FIELD_LABELS } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
 
 export function EvaluationPanel({ demande, readOnly }: { demande: DemandeDetail; readOnly?: boolean }) {
@@ -53,7 +54,7 @@ export function EvaluationPanel({ demande, readOnly }: { demande: DemandeDetail;
 
       {/* Indicateur de complétude */}
       <section className="card-axa card-pad">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           {evaluation.dossier_complet ? (
             <>
               <CheckCircle2 className="text-success" />
@@ -64,15 +65,36 @@ export function EvaluationPanel({ demande, readOnly }: { demande: DemandeDetail;
             </>
           ) : (
             <>
-              <XCircle className="text-axa-red" />
-              <div>
+              <XCircle className="shrink-0 text-axa-red" />
+              <div className="flex-1">
                 <p className="font-medium text-axa-red">Dossier incomplet</p>
-                <p className="help-text">
-                  {evaluation.champs_fdr_manquants.length > 0 &&
-                    `${evaluation.champs_fdr_manquants.length} champ(s) FDR manquant(s). `}
-                  {evaluation.pieces_manquantes.length > 0 &&
-                    `${evaluation.pieces_manquantes.length} pièce(s) requise(s) manquante(s).`}
-                </p>
+                <p className="help-text">Éléments restant à compléter avant l'envoi au siège :</p>
+                <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                  {evaluation.champs_fdr_manquants.length > 0 && (
+                    <div>
+                      <p className="mb-1 text-xs font-semibold uppercase text-muted">
+                        Champs du formulaire FDR
+                      </p>
+                      <ul className="ml-4 list-disc text-sm">
+                        {evaluation.champs_fdr_manquants.map((c) => (
+                          <li key={c}>{FDR_FIELD_LABELS[c] ?? c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {evaluation.pieces_manquantes.length > 0 && (
+                    <div>
+                      <p className="mb-1 text-xs font-semibold uppercase text-muted">
+                        Pièces justificatives
+                      </p>
+                      <ul className="ml-4 list-disc text-sm">
+                        {evaluation.pieces_manquantes.map((p) => (
+                          <li key={p.code}>{p.libelle}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}

@@ -69,6 +69,12 @@ class Demande(models.Model):
     # Gestion de la relance : on stocke la dernière relance pour appliquer le délai 24h.
     last_relance_at = models.DateTimeField(blank=True, null=True)
 
+    # Demande de compléments en attente (émise par le siège) : message libre et
+    # liste des codes de champs FDR pointés. Renseignés tant que le distributeur
+    # n'a pas renvoyé la demande ; vidés à la nouvelle soumission.
+    complement_message = models.TextField(blank=True, default="")
+    complement_champs = models.JSONField(default=list, blank=True)
+
     class Meta:
         ordering = ["-created_at"]
 
