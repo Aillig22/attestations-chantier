@@ -41,7 +41,7 @@
     /* ---------- Méta (référence / date) ---------- */
     .meta { color: #5c5c5c; font-size: 8.5px; margin: 0 0 6px 0; }
 
-    /* ---------- Titres de section ---------- */
+    /* ---------- Titres de section (bandeau réservé aux sections FDR) ---------- */
     h2 {
       color: #00008f;
       font-size: 12px;
@@ -51,6 +51,22 @@
       background-color: #eaeaf6;
       border-left: 4px solid #00008f;
     }
+
+    /* Corps d'attestation : contenu WYSIWYG libre. Les titres ne reprennent
+       pas le bandeau de section et respectent la couleur choisie dans l'éditeur. */
+    .attestation-body h1,
+    .attestation-body h2,
+    .attestation-body h3 {
+      color: #00008f;
+      background-color: transparent;
+      border: none;
+      padding: 0;
+      margin: 12px 0 6px 0;
+      font-weight: bold;
+    }
+    .attestation-body h1 { font-size: 15px; }
+    .attestation-body h2 { font-size: 13px; }
+    .attestation-body h3 { font-size: 11.5px; }
 
     /* ---------- Tableaux de données ---------- */
     table.data { width: 100%; border-collapse: collapse; margin: 0 0 4px 0; }
@@ -91,9 +107,9 @@
   <div id="header_content">
     <table class="brandbar">
       <tr>
-        <td width="60"><img src="{{ logo_data_uri }}" width="50" height="50" alt="AXA" /></td>
-        <td><span class="brand-sub">Attestations de chantier</span></td>
-        <td align="right">
+        <td width="52" valign="middle" style="padding-right: 2px;"><img src="{{ logo_data_uri }}" width="46" height="46" alt="AXA" /></td>
+        <td width="100%" valign="middle" style="padding-left: 6px;"><span class="brand-sub">Attestations de chantier</span></td>
+        <td align="right" valign="middle">
           <span class="doc-type">{% block doc_title %}{% endblock %}</span>
         </td>
       </tr>

@@ -172,9 +172,22 @@
   .prose-axa {
     @apply text-sm leading-relaxed;
   }
-  .prose-axa h1 { @apply text-xl font-bold mb-2; }
-  .prose-axa h2 { @apply text-lg font-semibold mb-2; }
+  /* Titres alignés sur le corps d'attestation du PDF : bleu AXA, gras, sans
+     bandeau (templates/pdf/base.html → .attestation-body). La couleur inline
+     éventuellement choisie dans l'éditeur prime. */
+  .prose-axa h1 { @apply text-axa-blue text-xl font-bold mt-3 mb-2; }
+  .prose-axa h2 { @apply text-axa-blue text-lg font-bold mt-3 mb-2; }
+  .prose-axa h3 { @apply text-axa-blue text-base font-bold mt-2 mb-2; }
   .prose-axa p { @apply mb-2; }
   .prose-axa ul { @apply list-disc pl-5 mb-2; }
+  .prose-axa ol { @apply list-decimal pl-5 mb-2; }
   .prose-axa strong { @apply font-semibold; }
+  .prose-axa a { @apply text-axa-blue underline; }
+  .prose-axa blockquote { @apply border-l-4 border-border pl-3 italic text-muted mb-2; }
+  .prose-axa hr { @apply my-3 border-t border-border; }
+  .prose-axa mark { @apply px-0.5; }
+  .prose-axa table { @apply w-full border-collapse mb-2; }
+  .prose-axa th,
+  .prose-axa td { @apply border border-border px-2 py-1 text-left align-top; }
+  .prose-axa th { @apply bg-axa-blue-light font-semibold; }
 }

@@ -13,7 +13,7 @@ from pathlib import Path
 from django.template.loader import render_to_string
 from xhtml2pdf import pisa
 
-_LOGO_PATH = Path(__file__).resolve().parent / "pdf_assets" / "logo-axa.png"
+_LOGO_PATH = Path(__file__).resolve().parent / "pdf_assets" / "axa-white.png"
 
 
 @lru_cache(maxsize=1)

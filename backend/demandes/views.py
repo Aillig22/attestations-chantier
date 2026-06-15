@@ -259,8 +259,8 @@ class DemandeViewSet(viewsets.ModelViewSet):
             return Response(AttestationSerializer(attestation).data)
         # L'attestation est générée par le siège, une fois la demande acceptée.
         self._assert_attestation_editable(demande, request.user)
-        data = {**request.data, "type": TypeAttestation.DEFINITIVE}
-        serializer = AttestationSerializer(attestation, data=data, partial=True)
+        # Le type (provisoire / définitive) est piloté par le siège depuis l'éditeur.
+        serializer = AttestationSerializer(attestation, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)

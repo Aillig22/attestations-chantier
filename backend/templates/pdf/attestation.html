@@ -1,5 +1,5 @@
 {% extends "pdf/base.html" %}
-{% block doc_title %}Attestation de chantier{% endblock %}
+{% block doc_title %}{% endblock %}
 {% block content %}
   <p style="margin: 2px 0 10px 0;">
     <span class="pill">{% if attestation.type == "DEFINITIVE" %}Définitive{% else %}Provisoire{% endif %}</span>
