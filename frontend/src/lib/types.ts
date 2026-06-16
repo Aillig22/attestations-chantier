@@ -129,3 +129,23 @@ export interface Notification {
   lue: boolean
   created_at: string
 }
+
+export interface ReportingData {
+  role: Role
+  kpis: {
+    total: number
+    brouillon: number
+    en_cours: number
+    traite: number
+    acceptees: number
+    refusees: number
+    taux_acceptation: number | null
+    delai_moyen_traitement_jours: number | null
+  }
+  par_statut: { statut: Statut; label: string; count: number }[]
+  par_decision: { decision: string; label: string; count: number }[]
+  par_risque: { niveau: 'FAIBLE' | 'MOYEN' | 'ELEVE'; label: string; count: number }[]
+  evolution: { mois: string; creees: number; traitees: number }[]
+  top_motifs_refus?: { motif: string; count: number }[]
+  par_distributeur?: { nom: string; total: number; acceptees: number }[]
+}

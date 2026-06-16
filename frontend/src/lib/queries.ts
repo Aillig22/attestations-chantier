@@ -8,6 +8,7 @@ import type {
   Evaluation,
   FDR,
   Notification,
+  ReportingData,
 } from './types'
 
 export interface DemandeFilters {
@@ -36,6 +37,13 @@ export function useEvaluation(id: number | string) {
   return useQuery({
     queryKey: ['evaluation', String(id)],
     queryFn: async () => (await api.get<Evaluation>(`/demandes/${id}/evaluation/`)).data,
+  })
+}
+
+export function useReporting() {
+  return useQuery({
+    queryKey: ['reporting'],
+    queryFn: async () => (await api.get<ReportingData>('/reporting/')).data,
   })
 }
 

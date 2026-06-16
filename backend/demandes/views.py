@@ -375,16 +375,150 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ReportingView(viewsets.ViewSet):
+    """Tableau de bord agrégé, adapté au rôle de l'utilisateur.
+
+    Le siège voit l'activité globale (toutes demandes, par distributeur, motifs
+    de refus) ; le distributeur ne voit que ses propres demandes.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def list(self, request):
         user = request.user
         qs = Demande.objects.all() if user.is_siege else Demande.objects.filter(created_by=user)
-        return Response({
-            "total": qs.count(),
-            "brouillon": qs.filter(statut=Statut.BROUILLON).count(),
-            "en_cours": qs.filter(statut=Statut.EN_COURS).count(),
-            "traite": qs.filter(statut=Statut.TRAITE).count(),
-            "acceptees": qs.filter(decision=Decision.ACCEPTEE).count(),
-            "refusees": qs.filter(decision=Decision.REFUSEE).count(),
-        })
+
+        total = qs.count()
+        brouillon = qs.filter(statut=Statut.BROUILLON).count()
+        en_cours = qs.filter(statut=Statut.EN_COURS).count()
+        traite = qs.filter(statut=Statut.TRAITE).count()
+        acceptees = qs.filter(decision=Decision.ACCEPTEE).count()
+        refusees = qs.filter(decision=Decision.REFUSEE).count()
+
+        decidees = acceptees + refusees
+        taux_acceptation = round(acceptees / decidees * 100, 1) if decidees else None
+
+        data = {
+            "role": user.role,
+            "kpis": {
+                "total": total,
+                "brouillon": brouillon,
+                "en_cours": en_cours,
+                "traite": traite,
+                "acceptees": acceptees,
+                "refusees": refusees,
+                "taux_acceptation": taux_acceptation,
+                "delai_moyen_traitement_jours": self._delai_moyen(qs),
+            },
+            "par_statut": [
+                {"statut": Statut.BROUILLON, "label": "Brouillon", "count": brouillon},
+                {"statut": Statut.EN_COURS, "label": "En cours", "count": en_cours},
+                {"statut": Statut.TRAITE, "label": "Traité", "count": traite},
+            ],
+            "par_decision": [
+                {"decision": "ACCEPTEE", "label": "Acceptées", "count": acceptees},
+                {"decision": "REFUSEE", "label": "Refusées", "count": refusees},
+                {"decision": "EN_ATTENTE", "label": "En attente", "count": en_cours},
+            ],
+            "par_risque": self._par_risque(qs),
+            "evolution": self._evolution(qs),
+        }
+
+        if user.is_siege:
+            data["top_motifs_refus"] = self._top_motifs_refus(qs)
+            data["par_distributeur"] = self._par_distributeur(qs)
+
+        return Response(data)
+
+    # --- Helpers d'agrégation ---------------------------------------------- #
+    @staticmethod
+    def _delai_moyen(qs):
+        """Délai moyen (en jours) entre soumission et traitement."""
+        deltas = qs.filter(
+            traite_at__isnull=False, submitted_at__isnull=False
+        ).values_list("submitted_at", "traite_at")
+        if not deltas:
+            return None
+        jours = [(t - s).total_seconds() / 86400 for s, t in deltas]
+        return round(sum(jours) / len(jours), 1)
+
+    @staticmethod
+    def _par_risque(qs):
+        """Répartition par niveau de risque, calculé via les règles métier."""
+        compteur = {"FAIBLE": 0, "MOYEN": 0, "ELEVE": 0}
+        for fdr in FDR.objects.filter(demande__in=qs):
+            compteur[business_rules.risk_score(fdr).niveau] += 1
+        return [
+            {"niveau": "FAIBLE", "label": "Faible", "count": compteur["FAIBLE"]},
+            {"niveau": "MOYEN", "label": "Moyen", "count": compteur["MOYEN"]},
+            {"niveau": "ELEVE", "label": "Élevé", "count": compteur["ELEVE"]},
+        ]
+
+    @staticmethod
+    def _evolution(qs):
+        """Créées vs traitées par mois sur les 6 derniers mois."""
+        from django.db.models.functions import TruncMonth
+        from django.db.models import Count
+
+        debut = (timezone.now().replace(day=1) - timedelta(days=31 * 5)).replace(day=1)
+
+        def par_mois(champ):
+            return {
+                r["mois"].strftime("%Y-%m"): r["n"]
+                for r in qs.filter(**{f"{champ}__gte": debut})
+                .annotate(mois=TruncMonth(champ))
+                .values("mois")
+                .annotate(n=Count("id"))
+                if r["mois"]
+            }
+
+        creees = par_mois("created_at")
+        traitees = par_mois("traite_at")
+
+        # Génère les 6 buckets mensuels consécutifs jusqu'au mois courant.
+        buckets = []
+        m = timezone.now().replace(day=1)
+        for _ in range(6):
+            cle = m.strftime("%Y-%m")
+            buckets.append(
+                {"mois": cle, "creees": creees.get(cle, 0), "traitees": traitees.get(cle, 0)}
+            )
+            m = (m - timedelta(days=1)).replace(day=1)
+        buckets.reverse()
+        return buckets
+
+    @staticmethod
+    def _top_motifs_refus(qs):
+        from django.db.models import Count
+
+        return [
+            {"motif": r["motif_refus"], "count": r["n"]}
+            for r in qs.filter(decision=Decision.REFUSEE)
+            .exclude(motif_refus="")
+            .values("motif_refus")
+            .annotate(n=Count("id"))
+            .order_by("-n")[:5]
+        ]
+
+    @staticmethod
+    def _par_distributeur(qs):
+        from django.db.models import Count, Q
+
+        rows = (
+            qs.values("created_by", "created_by__first_name", "created_by__last_name", "created_by__username")
+            .annotate(
+                total=Count("id"),
+                acceptees=Count("id", filter=Q(decision=Decision.ACCEPTEE)),
+            )
+            .order_by("-total")[:8]
+        )
+        out = []
+        for r in rows:
+            nom = f"{r['created_by__first_name']} {r['created_by__last_name']}".strip()
+            out.append(
+                {
+                    "nom": nom or r["created_by__username"],
+                    "total": r["total"],
+                    "acceptees": r["acceptees"],
+                }
+            )
+        return out

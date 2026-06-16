@@ -19,7 +19,6 @@ import {
   CheckCircle2,
   Download,
   Eye,
-  Heading2,
   Highlighter,
   Italic,
   Link2,
