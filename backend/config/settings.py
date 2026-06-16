@@ -93,6 +93,9 @@ if DATABASE_URL:
 
     _urlparse.uses_netloc.append("postgres")
     url = _urlparse.urlparse(DATABASE_URL)
+    # Les hébergeurs managés (Neon, Supabase…) imposent le SSL. On reprend le
+    # sslmode de l'URL s'il est fourni, sinon on force "require".
+    _query = dict(_urlparse.parse_qsl(url.query))
     DATABASES["default"] = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": url.path[1:],
@@ -100,6 +103,7 @@ if DATABASE_URL:
         "PASSWORD": url.password,
         "HOST": url.hostname,
         "PORT": url.port or "",
+        "OPTIONS": {"sslmode": _query.get("sslmode", "require")},
     }
 
 
