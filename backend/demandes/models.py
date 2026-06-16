@@ -1,5 +1,16 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db import models
+
+# Taille maximale autorisée pour une pièce justificative (10 Mo).
+MAX_PIECE_SIZE = 10 * 1024 * 1024
+ALLOWED_PIECE_EXTENSIONS = ["pdf", "jpg", "jpeg", "png"]
+
+
+def validate_piece_size(fichier):
+    if fichier.size and fichier.size > MAX_PIECE_SIZE:
+        raise ValidationError("Fichier trop volumineux (10 Mo maximum).")
 
 
 # --------------------------------------------------------------------------- #
@@ -151,7 +162,13 @@ class PieceJustificative(models.Model):
     demande = models.ForeignKey(
         Demande, on_delete=models.CASCADE, related_name="pieces"
     )
-    fichier = models.FileField(upload_to="pieces/%Y/%m/")
+    fichier = models.FileField(
+        upload_to="pieces/%Y/%m/",
+        validators=[
+            FileExtensionValidator(allowed_extensions=ALLOWED_PIECE_EXTENSIONS),
+            validate_piece_size,
+        ],
+    )
     nom_original = models.CharField(max_length=255, blank=True)
     # Type de pièce requise auquel ce fichier répond (libellé issu des règles métier).
     type_requis = models.CharField(max_length=255, blank=True)

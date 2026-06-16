@@ -204,3 +204,44 @@ class AttestationRoleTests(APITestCase):
         self.client.force_authenticate(self.agent)
         resp = self.client.post(f"/api/demandes/{self.demande.id}/analyse-ia/")
         self.assertEqual(resp.status_code, 403)
+
+
+class SecurityRegressionTests(APITestCase):
+    """Non-régression des correctifs de l'audit sécurité."""
+
+    def setUp(self):
+        self.agent = User.objects.create_user("agent", password="x", role="DISTRIBUTEUR")
+        self.siege = User.objects.create_user("siege", password="x", role="SIEGE")
+        self.demande = Demande.objects.create(
+            created_by=self.agent, statut=Statut.EN_COURS, submitted_at=timezone.now()
+        )
+        make_fdr(self.demande)
+
+    def test_distributeur_ne_peut_pas_forcer_la_decision_via_patch(self):
+        """C2 : un PATCH de la demande ne doit pas permettre d'auto-accepter."""
+        self.client.force_authenticate(self.agent)
+        resp = self.client.patch(
+            f"/api/demandes/{self.demande.id}/",
+            {"decision": Decision.ACCEPTEE, "statut": Statut.TRAITE},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 405)
+        self.demande.refresh_from_db()
+        self.assertEqual(self.demande.statut, Statut.EN_COURS)
+        self.assertIsNone(self.demande.decision)
+
+    def test_contenu_attestation_est_assaini(self):
+        """H1 : le HTML d'attestation est nettoyé (suppression des scripts)."""
+        self.demande.statut = Statut.TRAITE
+        self.demande.decision = Decision.ACCEPTEE
+        self.demande.save()
+        self.client.force_authenticate(self.siege)
+        resp = self.client.put(
+            f"/api/demandes/{self.demande.id}/attestation/",
+            {"contenu": "<p>Bonjour<script>alert(1)</script></p><img src=x onerror=alert(1)>"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        contenu = resp.data["contenu"]
+        self.assertNotIn("<script", contenu)
+        self.assertNotIn("onerror", contenu)

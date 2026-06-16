@@ -23,9 +23,20 @@ def _logo_data_uri() -> str:
     return f"data:image/png;base64,{data}"
 
 
+def _block_external(uri, rel):
+    """Refuse toute ressource externe lors du rendu PDF.
+
+    Le logo et les styles sont embarqués (data URI / CSS inline), gérés par
+    xhtml2pdf sans passer par ce callback. Tout autre URI (`file://`, `http(s)://`,
+    chemin local) provient donc du contenu HTML utilisateur : on le bloque pour
+    empêcher la lecture de fichiers locaux (LFI) ou des requêtes internes (SSRF).
+    """
+    raise OSError(f"Ressource externe refusée dans le rendu PDF : {uri!r}")
+
+
 def _render_pdf(html: str) -> bytes:
     buffer = BytesIO()
-    pisa.CreatePDF(src=html, dest=buffer, encoding="utf-8")
+    pisa.CreatePDF(src=html, dest=buffer, encoding="utf-8", link_callback=_block_external)
     return buffer.getvalue()
 
 

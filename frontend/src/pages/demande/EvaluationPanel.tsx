@@ -1,19 +1,23 @@
-import { useRef } from 'react'
-import { CheckCircle2, FileUp, Trash2, XCircle } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { CheckCircle2, Download, FileUp, Trash2, XCircle } from 'lucide-react'
 import type { DemandeDetail } from '@/lib/types'
 import { useEvaluation, usePieces } from '@/lib/queries'
+import { useAuth } from '@/lib/auth'
 import { useToast } from '@/components/Toast'
 import { apiError } from '@/lib/api'
 import { RiskGauge } from '@/components/RiskGauge'
 import { FDR_FIELD_LABELS } from '@/lib/constants'
-import { formatDate } from '@/lib/utils'
+import { downloadFile, formatDate } from '@/lib/utils'
 
 export function EvaluationPanel({ demande, readOnly }: { demande: DemandeDetail; readOnly?: boolean }) {
   const { data: evaluation, isLoading } = useEvaluation(demande.id)
   const { upload, remove } = usePieces(demande.id)
+  const { user } = useAuth()
   const toast = useToast()
   const fileInput = useRef<HTMLInputElement>(null)
   const pendingType = useRef<string>('')
+  const [downloadingAll, setDownloadingAll] = useState(false)
+  const isSiege = user?.role === 'SIEGE'
 
   function pickFile(type_requis: string) {
     pendingType.current = type_requis
@@ -37,6 +41,27 @@ export function EvaluationPanel({ demande, readOnly }: { demande: DemandeDetail;
       await remove.mutateAsync(id)
     } catch (err) {
       toast('error', apiError(err))
+    }
+  }
+
+  async function downloadOne(piece: DemandeDetail['pieces'][number]) {
+    try {
+      await downloadFile(piece.fichier_url, piece.nom_original)
+    } catch (err) {
+      toast('error', apiError(err))
+    }
+  }
+
+  async function downloadAll() {
+    setDownloadingAll(true)
+    try {
+      for (const piece of demande.pieces) {
+        await downloadFile(piece.fichier_url, piece.nom_original)
+      }
+    } catch (err) {
+      toast('error', apiError(err))
+    } finally {
+      setDownloadingAll(false)
     }
   }
 
@@ -142,7 +167,18 @@ export function EvaluationPanel({ demande, readOnly }: { demande: DemandeDetail;
         {/* Liste des fichiers uploadés */}
         {demande.pieces.length > 0 && (
           <div className="mt-4">
-            <p className="mb-2 text-xs font-medium uppercase text-muted">Fichiers déposés</p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-medium uppercase text-muted">Fichiers déposés</p>
+              {isSiege && demande.pieces.length > 1 && (
+                <button
+                  className="btn-ghost btn-sm"
+                  onClick={downloadAll}
+                  disabled={downloadingAll}
+                >
+                  <Download size={14} /> Tout télécharger
+                </button>
+              )}
+            </div>
             <ul className="flex flex-col gap-1.5">
               {demande.pieces.map((piece) => (
                 <li
@@ -154,6 +190,15 @@ export function EvaluationPanel({ demande, readOnly }: { demande: DemandeDetail;
                   </a>
                   <div className="flex items-center gap-3">
                     <span className="help-text">{formatDate(piece.uploaded_at)}</span>
+                    {isSiege && (
+                      <button
+                        className="text-axa-blue hover:opacity-70"
+                        onClick={() => downloadOne(piece)}
+                        title="Télécharger"
+                      >
+                        <Download size={14} />
+                      </button>
+                    )}
                     {!readOnly && (
                       <button
                         className="text-axa-red hover:opacity-70"

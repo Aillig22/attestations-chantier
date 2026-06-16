@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -82,6 +82,14 @@ class DemandeViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Seul un distributeur peut créer une demande.")
         demande = serializer.save(created_by=self.request.user)
         FDR.objects.create(demande=demande)
+
+    def update(self, request, *args, **kwargs):
+        # La demande elle-même n'est pas éditable en masse : toute transition de
+        # cycle de vie passe par les actions dédiées (submit, decision, fdr...).
+        raise MethodNotAllowed(request.method)
+
+    def partial_update(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
 
     def perform_destroy(self, instance):
         # Seul le distributeur propriétaire peut supprimer, et uniquement un

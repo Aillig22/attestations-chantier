@@ -1,6 +1,7 @@
 import { CheckCircle2 } from 'lucide-react'
 import logoAxa from '@/assets/axa_white_logo.svg'
 import type { DemandeDetail, Attestation } from '@/lib/types'
+import { sanitizeHtml } from '@/lib/utils'
 
 /**
  * Aperçu fidèle au PDF généré côté backend (templates/pdf/base.html +
@@ -50,7 +51,10 @@ export function AttestationPreview({
             </span>
           </p>
 
-          <div className="prose-axa" dangerouslySetInnerHTML={{ __html: html || '<p>—</p>' }} />
+          <div
+            className="prose-axa"
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(html || '<p>—</p>') }}
+          />
 
           {validee ? (
             <div className="mt-8 flex justify-end">

@@ -1,8 +1,10 @@
+import os
 from datetime import date
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from demandes.models import (
@@ -23,8 +25,38 @@ User = get_user_model()
 class Command(BaseCommand):
     help = "Crée les comptes de démo et quelques demandes d'exemple."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Autorise le seed même hors DEBUG (équivaut à SEED_DEMO=1).",
+        )
+
     def handle(self, *args, **options):
+        # Garde-fou : ne jamais créer de comptes à mot de passe connu en prod par
+        # accident. Le seed n'est autorisé qu'en DEBUG, ou explicitement via
+        # SEED_DEMO=1 / --force (environnement de démo dédié).
+        seed_demo = options["force"] or os.environ.get("SEED_DEMO", "").lower() in (
+            "1", "true", "yes", "on",
+        )
+        if not settings.DEBUG and not seed_demo:
+            raise CommandError(
+                "Seed refusé hors DEBUG. Pour un environnement de démo dédié, "
+                "relancer avec SEED_DEMO=1 et DEMO_PASSWORD défini."
+            )
+
+        # Mot de passe des comptes de démo : depuis l'env, jamais en dur. En DEBUG
+        # un défaut local est toléré pour le confort de développement.
+        demo_password = os.environ.get("DEMO_PASSWORD")
+        if not demo_password:
+            if settings.DEBUG:
+                demo_password = "demo1234"
+            else:
+                raise CommandError("DEMO_PASSWORD doit être défini pour seeder hors DEBUG.")
+
         # --- Utilisateurs de démo ---
+        # Le mot de passe n'est posé qu'à la création : un re-seed n'écrase pas un
+        # mot de passe qui aurait été changé entre-temps.
         agent, created = User.objects.get_or_create(
             username="agent",
             defaults={
@@ -34,10 +66,11 @@ class Command(BaseCommand):
                 "role": "DISTRIBUTEUR",
             },
         )
-        agent.set_password("demo1234")
-        agent.save()
+        if created:
+            agent.set_password(demo_password)
+            agent.save()
 
-        siege, _ = User.objects.get_or_create(
+        siege, created = User.objects.get_or_create(
             username="siege",
             defaults={
                 "first_name": "Bruno",
@@ -46,15 +79,11 @@ class Command(BaseCommand):
                 "role": "SIEGE",
             },
         )
-        siege.set_password("demo1234")
-        siege.save()
+        if created:
+            siege.set_password(demo_password)
+            siege.save()
 
-        admin, _ = User.objects.get_or_create(
-            username="admin",
-            defaults={"is_staff": True, "is_superuser": True, "role": "SIEGE"},
-        )
-        admin.set_password("admin1234")
-        admin.save()
+        # Pas de superuser créé par le seed : utiliser `manage.py createsuperuser`.
 
         # --- Demandes d'exemple ---
         if Demande.objects.exists():
@@ -169,4 +198,7 @@ class Command(BaseCommand):
 
     def _done(self):
         self.stdout.write(self.style.SUCCESS("Seed terminé."))
-        self.stdout.write("Comptes : agent/demo1234 (distributeur), siege/demo1234 (siège), admin/admin1234.")
+        self.stdout.write(
+            "Comptes de démo : agent (distributeur), siege (siège). "
+            "Mot de passe = $DEMO_PASSWORD. Superuser : `manage.py createsuperuser`."
+        )

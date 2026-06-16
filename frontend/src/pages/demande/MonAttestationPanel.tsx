@@ -5,6 +5,7 @@ import { useAttestation } from '@/lib/queries'
 import { useToast } from '@/components/Toast'
 import { downloadAttestationPdf } from '@/lib/pdf'
 import { apiError } from '@/lib/api'
+import { sanitizeHtml } from '@/lib/utils'
 
 /**
  * Vue distributeur en lecture seule : permet de consulter et télécharger
@@ -56,7 +57,7 @@ export function MonAttestationPanel({ demande }: { demande: DemandeDetail }) {
       <section className="card-axa card-pad">
         <div
           className="prose-axa"
-          dangerouslySetInnerHTML={{ __html: attestation!.contenu }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(attestation!.contenu) }}
         />
       </section>
     </div>

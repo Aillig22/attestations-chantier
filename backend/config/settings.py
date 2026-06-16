@@ -13,12 +13,16 @@ def env_bool(name: str, default: bool) -> bool:
     return os.environ.get(name, str(default)).lower() in ("1", "true", "yes", "on")
 
 
-SECRET_KEY = os.environ.get(
-    "SECRET_KEY",
-    "django-insecure-f$5b6q!8y24+)4-0)tt*v7r_@=oc-o!l(^zz)rf7uc**y(-n=1",
-)
+DEBUG = env_bool("DEBUG", False)
 
-DEBUG = env_bool("DEBUG", True)
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG:
+        # Clé jetable réservée au développement local. Jamais utilisée en prod :
+        # hors DEBUG, l'absence de SECRET_KEY fait échouer le démarrage.
+        SECRET_KEY = "django-insecure-dev-only-key-do-not-use-in-production"
+    else:
+        raise RuntimeError("La variable d'environnement SECRET_KEY est obligatoire en production.")
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
@@ -146,10 +150,21 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
+    # Limitation de débit : protège le login (brute force) et borne l'API.
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.ScopedRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "10/min",
+        "user": "1000/hour",
+    },
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=12),
+    # Access court : limite la fenêtre d'exploitation d'un token volé. Le front
+    # rafraîchit via le refresh token (durée plus longue).
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
@@ -169,6 +184,20 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if os.environ.get("CSRF_TRUSTED_ORIGINS") else []
+
+# Durcissement HTTP — actif uniquement hors DEBUG (prod derrière le proxy Render).
+SECURE_CONTENT_TYPE_NOSNIFF = True
+if not DEBUG:
+    # Render termine le TLS et place l'app derrière un proxy : on se fie à l'en-tête
+    # transmis pour détecter le HTTPS.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 an
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
 
 # Délai minimum entre deux relances d'une demande (heures)
 RELANCE_COOLDOWN_HOURS = 24

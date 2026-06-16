@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from . import business_rules
+from . import business_rules, sanitize
 from .models import (
     Attestation,
     AnalyseIA,
@@ -52,6 +52,10 @@ class AttestationSerializer(serializers.ModelSerializer):
         model = Attestation
         fields = ("id", "contenu", "type", "validee", "created_at", "updated_at")
         read_only_fields = ("validee", "created_at", "updated_at")
+
+    def validate_contenu(self, value):
+        # Le HTML riche est assaini côté serveur (anti-XSS persistant) avant stockage.
+        return sanitize.clean_html(value)
 
 
 class AnalyseIASerializer(serializers.ModelSerializer):
@@ -141,6 +145,24 @@ class DemandeDetailSerializer(serializers.ModelSerializer):
             "analyse_ia",
             "commentaires",
             "evaluation",
+        )
+        # Le cycle de vie (statut/décision/compléments/horodatages) ne se pilote
+        # QUE via les actions dédiées (submit, decision, demander_complements...).
+        # Les exposer en écriture ici permettrait à un distributeur de PATCH sa
+        # propre demande en `decision=ACCEPTEE` et de contourner le siège.
+        read_only_fields = (
+            "reference",
+            "statut",
+            "decision",
+            "motif_refus",
+            "created_by_nom",
+            "created_at",
+            "updated_at",
+            "submitted_at",
+            "traite_at",
+            "last_relance_at",
+            "complement_message",
+            "complement_champs",
         )
 
     def get_evaluation(self, obj):

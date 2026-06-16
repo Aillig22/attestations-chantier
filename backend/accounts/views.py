@@ -8,6 +8,8 @@ from .serializers import RoleTokenObtainPairSerializer, UserSerializer
 
 class LoginView(TokenObtainPairView):
     serializer_class = RoleTokenObtainPairSerializer
+    # Limite les tentatives de connexion (anti brute force / credential stuffing).
+    throttle_scope = "login"
 
 
 class MeView(APIView):
