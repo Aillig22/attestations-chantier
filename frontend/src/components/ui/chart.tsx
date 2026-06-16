@@ -39,9 +39,12 @@ export function ChartContainer({
     <ChartContext.Provider value={config}>
       <div
         className={cn(
-          'w-full [&_.recharts-cartesian-grid_line]:stroke-border/60',
+          'w-full select-none',
+          '[&_.recharts-cartesian-grid_line]:stroke-border/60',
           '[&_.recharts-cartesian-axis-tick_text]:fill-muted [&_.recharts-cartesian-axis-tick_text]:text-xs',
-          '[&_.recharts-surface]:outline-none',
+          // Supprime les contours/sélections au clic sur les éléments SVG (parts, barres…).
+          '[&_.recharts-surface]:outline-none [&_*:focus]:outline-none [&_*:focus-visible]:outline-none',
+          '[&_.recharts-sector]:outline-none [&_.recharts-bar-rectangle]:outline-none',
           className,
         )}
         style={style}
