@@ -136,6 +136,28 @@ STORAGES = {
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Stockage objet (Cloudflare R2 / tout endpoint compatible S3) en production.
+# Le filesystem de Render est éphémère : sans ça les pièces justificatives
+# uploadées disparaîtraient à chaque redéploiement. Activé dès qu'un bucket est
+# configuré ; sinon on reste sur le FileSystemStorage (dev local inchangé).
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+if AWS_STORAGE_BUCKET_NAME:
+    AWS_S3_ACCESS_KEY_ID = os.environ.get("AWS_S3_ACCESS_KEY_ID")
+    AWS_S3_SECRET_ACCESS_KEY = os.environ.get("AWS_S3_SECRET_ACCESS_KEY")
+    AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL")
+    AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "auto")
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    # Supabase (et la plupart des endpoints S3 auto-hébergés) exigent le
+    # path-style addressing ; compatible aussi avec R2/S3.
+    AWS_S3_ADDRESSING_STYLE = os.environ.get("AWS_S3_ADDRESSING_STYLE", "path")
+    # Les pièces sont des documents privés : on sert des URLs présignées à durée
+    # de vie limitée plutôt que de rendre le bucket public.
+    AWS_QUERYSTRING_AUTH = True
+    AWS_QUERYSTRING_EXPIRE = int(os.environ.get("AWS_QUERYSTRING_EXPIRE", "3600"))
+    AWS_DEFAULT_ACL = None
+    AWS_S3_FILE_OVERWRITE = False
+    STORAGES["default"] = {"BACKEND": "storages.backends.s3.S3Storage"}
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
