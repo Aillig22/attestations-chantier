@@ -24,13 +24,17 @@ def _logo_data_uri() -> str:
 
 
 def _block_external(uri, rel):
-    """Refuse toute ressource externe lors du rendu PDF.
+    """Filtre les ressources chargées lors du rendu PDF.
 
-    Le logo et les styles sont embarqués (data URI / CSS inline), gérés par
-    xhtml2pdf sans passer par ce callback. Tout autre URI (`file://`, `http(s)://`,
-    chemin local) provient donc du contenu HTML utilisateur : on le bloque pour
-    empêcher la lecture de fichiers locaux (LFI) ou des requêtes internes (SSRF).
+    Les data URI (logo embarqué, images inline) sont auto-contenues : aucune
+    lecture de fichier ni requête réseau, on les laisse à xhtml2pdf (retour None
+    = traitement par défaut). Tout autre URI (`file://`, `http(s)://`, chemin
+    local) provient potentiellement du contenu HTML utilisateur : on le bloque
+    pour empêcher la lecture de fichiers locaux (LFI) ou les requêtes internes
+    (SSRF).
     """
+    if uri and uri.startswith("data:"):
+        return None
     raise OSError(f"Ressource externe refusée dans le rendu PDF : {uri!r}")
 
 
