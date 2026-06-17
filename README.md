@@ -190,7 +190,3 @@ Cycle de vie : `BROUILLON → EN_COURS → TRAITÉ` (transitions contrôlées c�
 - **Recommandation automatique** de décision et de niveau de risque pour le siège.
 - **Signature électronique** et horodatage de l'attestation, piste d'audit complète.
 - Notifications temps réel (WebSocket) et export Excel du reporting.
-- **Stockage objet des pièces justificatives** (Cloudflare R2 / S3 via `django-storages`)
-  avec URLs présignées : le filesystem de l'hébergeur est éphémère, les fichiers uploadés
-  doivent être persistés hors du conteneur. Les PDF (FDR, attestation) sont eux générés à
-  la volée et ne nécessitent pas de stockage.
