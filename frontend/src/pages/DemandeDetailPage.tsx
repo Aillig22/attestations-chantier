@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useDemande } from '@/lib/queries'
@@ -20,6 +20,17 @@ export function DemandeDetailPage() {
   const { data: demande, isLoading } = useDemande(id!)
   const [tab, setTab] = useState<TabId>('fdr')
 
+  // Onglet d'entrée selon le contexte : le siège arrive directement sur
+  // « Traitement siège », et le distributeur sur le motif de refus d'un dossier
+  // refusé. On ne le fait qu'une fois pour ne pas écraser les clics ultérieurs.
+  const initialTabSet = useRef(false)
+  useEffect(() => {
+    if (initialTabSet.current || !demande) return
+    initialTabSet.current = true
+    if (user?.role === 'SIEGE') setTab('traitement')
+    else if (demande.decision === 'REFUSEE') setTab('mon-attestation')
+  }, [demande, user])
+
   if (isLoading || !demande) return <div className="page text-muted">Chargement…</div>
 
   const isSiege = user?.role === 'SIEGE'
@@ -37,6 +48,14 @@ export function DemandeDetailPage() {
     { id: 'attestation', label: 'Attestation & IA', show: isSiege },
     { id: 'mon-attestation', label: 'Mon attestation', show: !isSiege },
   ]
+
+  // Progression explicite entre onglets visibles (en complément de la sauvegarde auto).
+  const shownTabs = tabs.filter((t) => t.show)
+  const currentIndex = shownTabs.findIndex((t) => t.id === tab)
+  const hasNext = currentIndex >= 0 && currentIndex < shownTabs.length - 1
+  const goNext = () => {
+    if (hasNext) setTab(shownTabs[currentIndex + 1].id)
+  }
 
   return (
     <div className="page">
@@ -74,8 +93,8 @@ export function DemandeDetailPage() {
         ))}
       </div>
 
-      {tab === 'fdr' && <FdrForm demande={demande} readOnly={!editable} />}
-      {tab === 'evaluation' && <EvaluationPanel demande={demande} readOnly={!editable} />}
+      {tab === 'fdr' && <FdrForm demande={demande} readOnly={!editable} onNext={hasNext ? goNext : undefined} />}
+      {tab === 'evaluation' && <EvaluationPanel demande={demande} readOnly={!editable} onNext={hasNext ? goNext : undefined} />}
       {tab === 'validation' && <ValidationPanel demande={demande} />}
       {tab === 'traitement' && <TraitementPanel demande={demande} />}
       {tab === 'attestation' && <AttestationPanel demande={demande} />}

@@ -175,8 +175,12 @@ class DemandeViewSet(viewsets.ModelViewSet):
         demande.save(update_fields=[
             "statut", "submitted_at", "complement_message", "complement_champs", "updated_at",
         ])
-        # Le distributeur n'est pas notifié de son propre envoi ; en revanche le
-        # siège est averti qu'une nouvelle demande est à traiter.
+        # Le distributeur reçoit une confirmation d'envoi ; le siège est averti
+        # qu'une nouvelle demande est à traiter.
+        _notifier(
+            demande.created_by, demande,
+            f"Demande {demande.reference} {'renvoyée' if renvoi else 'envoyée'} au siège.",
+        )
         auteur = demande.created_by.get_full_name() or demande.created_by.username
         for agent in User.objects.filter(role=Role.SIEGE):
             _notifier(

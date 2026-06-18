@@ -1,7 +1,7 @@
 import type { InputHTMLAttributes, ReactNode } from 'react'
 import { forwardRef, useEffect, useRef } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { AlertTriangle, MessageSquareWarning, Save } from 'lucide-react'
+import { AlertTriangle, ArrowRight, MessageSquareWarning, Save } from 'lucide-react'
 import type { DemandeDetail, FDR } from '@/lib/types'
 import { useEvaluation, useSaveFdr } from '@/lib/queries'
 import { useToast } from '@/components/Toast'
@@ -13,6 +13,7 @@ import { FormSelect } from '@/components/FormSelect'
 interface Props {
   demande: DemandeDetail
   readOnly?: boolean
+  onNext?: () => void
 }
 
 // Champs obligatoires du FDR (miroir de CHAMPS_FDR_OBLIGATOIRES côté backend).
@@ -32,7 +33,7 @@ const CHAMPS_FDR_OBLIGATOIRES: (keyof FDR)[] = [
   'type_intervention',
 ]
 
-export function FdrForm({ demande, readOnly }: Props) {
+export function FdrForm({ demande, readOnly, onNext }: Props) {
   const toast = useToast()
   const save = useSaveFdr(demande.id)
   const { data: evaluation } = useEvaluation(demande.id)
@@ -266,14 +267,23 @@ export function FdrForm({ demande, readOnly }: Props) {
         </div>
       </section>
 
-      {!readOnly && (
-        <p className="flex items-center gap-1.5 text-xs text-muted">
-          <Save size={13} className="shrink-0 text-axa-blue" />
-          {save.isPending
-            ? 'Enregistrement…'
-            : 'Vos modifications sont enregistrées automatiquement lorsque vous quittez le formulaire.'}
-        </p>
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {!readOnly ? (
+          <p className="flex items-center gap-1.5 text-xs text-muted">
+            <Save size={13} className="shrink-0 text-axa-blue" />
+            {save.isPending
+              ? 'Enregistrement…'
+              : 'Vos modifications sont enregistrées automatiquement lorsque vous quittez le formulaire.'}
+          </p>
+        ) : (
+          <span />
+        )}
+        {onNext && (
+          <button type="button" className="btn-primary ml-auto" onClick={onNext}>
+            Suivant <ArrowRight size={16} />
+          </button>
+        )}
+      </div>
     </form>
   )
 }

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { CheckCircle2, Download, FileUp, Trash2, XCircle } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Download, FileUp, Trash2, XCircle } from 'lucide-react'
 import type { DemandeDetail } from '@/lib/types'
 import { useEvaluation, usePieces } from '@/lib/queries'
 import { useAuth } from '@/lib/auth'
@@ -9,7 +9,15 @@ import { RiskGauge } from '@/components/RiskGauge'
 import { FDR_FIELD_LABELS } from '@/lib/constants'
 import { downloadFile, formatDate } from '@/lib/utils'
 
-export function EvaluationPanel({ demande, readOnly }: { demande: DemandeDetail; readOnly?: boolean }) {
+export function EvaluationPanel({
+  demande,
+  readOnly,
+  onNext,
+}: {
+  demande: DemandeDetail
+  readOnly?: boolean
+  onNext?: () => void
+}) {
   const { data: evaluation, isLoading } = useEvaluation(demande.id)
   const { upload, remove } = usePieces(demande.id)
   const { user } = useAuth()
@@ -214,6 +222,14 @@ export function EvaluationPanel({ demande, readOnly }: { demande: DemandeDetail;
           </div>
         )}
       </section>
+
+      {onNext && (
+        <div className="flex justify-end">
+          <button type="button" className="btn-primary" onClick={onNext}>
+            Suivant <ArrowRight size={16} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

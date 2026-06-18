@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Download, FileText } from 'lucide-react'
+import { Download, FileText, XCircle } from 'lucide-react'
 import type { DemandeDetail } from '@/lib/types'
 import { useAttestation } from '@/lib/queries'
 import { useToast } from '@/components/Toast'
@@ -32,6 +32,22 @@ export function MonAttestationPanel({ demande }: { demande: DemandeDetail }) {
 
   if (query.isLoading) {
     return <p className="text-muted">Chargement…</p>
+  }
+
+  if (demande.decision === 'REFUSEE') {
+    return (
+      <section className="card-axa card-pad flex flex-col items-center gap-3 text-center">
+        <XCircle size={28} className="text-axa-red" />
+        <p className="font-medium">Demande refusée</p>
+        {demande.motif_refus && (
+          <div className="w-full max-w-md rounded-lg bg-red-50 p-3 text-left text-sm text-red-800">
+            <span className="font-medium">Motif du refus : </span>
+            {demande.motif_refus}
+          </div>
+        )}
+        <p className="help-text max-w-md">Veuillez refaire une demande.</p>
+      </section>
+    )
   }
 
   if (!disponible) {
