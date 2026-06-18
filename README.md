@@ -54,7 +54,7 @@ attestations-chantier/
 │   │   ├── pdf.py + templates/pdf/  # génération PDF (FDR, attestation)
 │   │   ├── permissions.py  # droits par rôle
 │   │   ├── serializers.py / views.py
-│   │   └── tests.py        # 18 tests (règles métier + droits + cas limites)
+│   │   └── tests.py        # 25 tests (règles métier + droits + cas limites)
 │   └── requirements.txt
 └── frontend/
     └── src/
@@ -79,10 +79,16 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+export DEBUG=True                    # mode dev : SQLite + clé jetable + seed activé
 python manage.py migrate
-python manage.py seed          # crée les comptes + demandes de démo
-python manage.py runserver     # http://127.0.0.1:8000
+python manage.py seed                # crée les comptes + demandes de démo
+python manage.py runserver           # http://127.0.0.1:8000
 ```
+
+> En l'absence de `DEBUG=True`, le serveur exige les variables de production
+> (`SECRET_KEY`, `DATABASE_URL`…). Conserver `export DEBUG=True` dans le même
+> terminal pour les commandes suivantes (`seed`, `test`). Voir
+> [`backend/.env.example`](backend/.env.example) pour la configuration de production.
 
 ### Frontend
 ```bash
@@ -92,11 +98,15 @@ npm run dev                    # http://localhost:5173 (proxy /api -> :8000)
 ```
 
 ### Comptes de démo
+Créés par `python manage.py seed` :
+
 | Rôle | Identifiant | Mot de passe |
 | --- | --- | --- |
 | Distributeur | `agent` | `demo1234` |
 | Siège | `siege` | `demo1234` |
-| Admin Django | `admin` | `admin1234` |
+
+> L'admin Django n'est pas seedé : le créer au besoin avec
+> `python manage.py createsuperuser`.
 
 ---
 
@@ -131,7 +141,7 @@ cd backend
 python manage.py test
 ```
 
-18 tests couvrant les **6 règles de pièces requises**, le scoring de risque, la complétude,
+25 tests couvrant les **6 règles de pièces requises**, le scoring de risque, la complétude,
 les transitions de statut interdites, et la **gestion des droits** (un distributeur ne voit
 pas les demandes d'un autre, ne peut pas décider ; refus sans motif rejeté ; relance bloquée
 avant 24h).
@@ -176,9 +186,15 @@ Cycle de vie : `BROUILLON → EN_COURS → TRAITÉ` (transitions contrôlées c�
 
 - **Frontend → Vercel** : build Vite, variable `VITE_API_URL` pointant vers l'API Render,
   SPA fallback géré par `frontend/vercel.json`.
-- **Backend → Render** : décrit en IaC dans [`render.yaml`](render.yaml) (web service Python +
-  PostgreSQL managé, `gunicorn`, `whitenoise`, migrations + seed via `build.sh`). Renseigner
+- **Backend → Render** : décrit en IaC dans [`render.yaml`](render.yaml) (web service Python,
+  `gunicorn`, `whitenoise`, migrations + seed via `build.sh`). Renseigner
   `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS` avec le domaine Vercel.
+- **Base de données → Neon** (PostgreSQL serverless managé) : chaîne de connexion fournie
+  via `DATABASE_URL` (SSL forcé automatiquement, cf. [`settings.py`](backend/config/settings.py)).
+- **Pièces justificatives → Supabase Storage** (objet S3-compatible) : le filesystem de Render
+  étant éphémère, les uploads sont stockés hors instance et servis via des **URLs présignées**
+  à durée de vie limitée. Activé dès que `AWS_STORAGE_BUCKET_NAME` est défini ; sinon le
+  backend reste sur le `FileSystemStorage` local. Secrets (`AWS_S3_*`) à renseigner côté Render.
 
 ---
 

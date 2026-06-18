@@ -88,7 +88,7 @@ class Command(BaseCommand):
         # --- Demandes d'exemple ---
         if Demande.objects.exists():
             self.stdout.write(self.style.WARNING("Demandes déjà présentes, seed des demandes ignoré."))
-            self._done()
+            self._done(demo_password)
             return
 
         # 1. Brouillon simple (faible risque, dossier complet)
@@ -194,11 +194,11 @@ class Command(BaseCommand):
         )
 
         self.stdout.write(self.style.SUCCESS("3 demandes d'exemple créées."))
-        self._done()
+        self._done(demo_password)
 
-    def _done(self):
+    def _done(self, demo_password):
         self.stdout.write(self.style.SUCCESS("Seed terminé."))
         self.stdout.write(
             "Comptes de démo : agent (distributeur), siege (siège). "
-            "Mot de passe = $DEMO_PASSWORD. Superuser : `manage.py createsuperuser`."
+            f"Mot de passe = {demo_password}. Superuser : `manage.py createsuperuser`."
         )
